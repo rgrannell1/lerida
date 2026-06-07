@@ -45,11 +45,11 @@ export function About(): m.Component {
             "data-action": "about-close",
           }, m("i.fa.fa-times")),
           m("h1.about-title", "lerida"),
-          m("p.about-tagline", "Every map is a link."),
+          m("p.about-tagline", "Make your own maps."),
           m(
             "p",
-            "lerida turns an annotated map into a URL. Drop markers, draw lines and polygons, " +
-              "add text labels and colours — the whole map is encoded in the address bar.",
+            "lerida turns an annotated map into a URL. Add markers, text, " +
+            "and lines to your map. All data is stored in the URL."
           ),
           m(
             "p",
