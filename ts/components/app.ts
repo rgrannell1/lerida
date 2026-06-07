@@ -5,6 +5,7 @@
 import m from "mithril";
 import { MapView } from "./map.ts";
 import { Toolbar } from "./toolbar.ts";
+import { About } from "./about.ts";
 import { ui } from "../ui.ts";
 
 // While a line or polygon is being drawn, remind the user how to finish — the
@@ -19,7 +20,7 @@ function drawHint(): m.Vnode | null {
 export function App(): m.Component {
   return {
     view() {
-      return [m(MapView), m(Toolbar), drawHint()];
+      return [m(MapView), m(Toolbar), drawHint(), ui.showAbout ? m(About) : null];
     },
   };
 }

@@ -66,6 +66,10 @@ function toggleShowAllTools(): void {
   ui.showAllTools = !ui.showAllTools;
 }
 
+function openAbout(): void {
+  ui.showAbout = true;
+}
+
 // Render a Font Awesome glyph button (tool buttons), highlighted when active.
 // `data` adds stable data-* attributes so the e2e tests can identify buttons
 // without depending on Font Awesome / Leaflet class names.
@@ -166,7 +170,11 @@ export function Toolbar(): m.Component {
       );
       const rows = [
         m("div.toolbar-header", [
-          m("span.toolbar-title", "Lerida"),
+          m("button.toolbar-title", {
+            title: "About lerida",
+            onclick: openAbout,
+            "data-action": "about",
+          }, "lerida"),
           m("div.toolbar-actions", [
             glyphButton("trash", "Clear all", false, clearFeatures, { "data-action": "clear" }),
             toggleButton("chevron-up", "Minimise", "minimise"),

@@ -14,4 +14,6 @@ export const ui = {
   showAllFeatures: false,
   // Whether the tool palette shows the less-common tools (the "…" toggle).
   showAllTools: false,
+  // Whether the "about" overlay (opened from the brand title) is showing.
+  showAbout: false,
 };

@@ -500,10 +500,10 @@ Deno.test("resizing a not-yet-typed label does not write an empty label to the U
   });
 });
 
-Deno.test("the toolbar shows the Lerida title", async () => {
+Deno.test("the toolbar shows the lerida brand title", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
-    assertEquals(await harness.page.locator(".toolbar-title").textContent(), "Lerida");
+    assertEquals(await harness.page.locator(".toolbar-title").textContent(), "lerida");
   });
 });
 
@@ -526,6 +526,23 @@ Deno.test("a draw hint shows while drawing a line and clears when the tool chang
     await harness.page.locator("[data-tool='marker']").click();
     await harness.page.waitForFunction(() => !document.querySelector("[data-role='draw-hint']"));
     assertEquals(await harness.page.locator("[data-role='draw-hint']").count(), 0);
+  });
+});
+
+Deno.test("clicking the brand title opens the about view, and it closes again", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    assertEquals(await harness.page.locator("[data-role='about']").count(), 0);
+    await harness.page.locator("[data-action='about']").click();
+    await harness.page.waitForSelector("[data-role='about']");
+    assertStringIncludes(
+      (await harness.page.locator("[data-role='about']").textContent()) ?? "",
+      "Every map is a link",
+    );
+    // The close button dismisses it.
+    await harness.page.locator("[data-action='about-close']").click();
+    await harness.page.waitForFunction(() => !document.querySelector("[data-role='about']"));
+    assertEquals(await harness.page.locator("[data-role='about']").count(), 0);
   });
 });
 
