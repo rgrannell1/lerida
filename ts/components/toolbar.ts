@@ -32,7 +32,6 @@ const TOOLS: Tool[] = [
   { id: "line", glyph: "minus", title: "Line", common: true },
   { id: "text", glyph: "font", title: "Text", common: true },
   { id: "eraser", glyph: "eraser", title: "Eraser", common: true },
-  { id: "highlight", glyph: "paint-brush", title: "Highlighter" },
   { id: "polygon", glyph: "square-o", title: "Polygon" },
 ];
 
@@ -102,7 +101,7 @@ function moreFeaturesButton(): m.Vnode {
   });
 }
 
-// The "…" toggle that reveals / hides the less-common tools (highlighter, polygon).
+// The "…" toggle that reveals / hides the less-common tools (polygon).
 function moreToolsButton(): m.Vnode {
   return glyphButton("ellipsis-h", "More tools", ui.showAllTools, toggleShowAllTools, {
     "data-action": "more-tools",

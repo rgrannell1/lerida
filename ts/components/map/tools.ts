@@ -21,13 +21,8 @@ export function applyTool(): void {
   if (!map) {
     return;
   }
-  // The highlighter pen draws freehand on press-drag, so map panning must be off
-  // while it is active; every other tool pans normally.
-  if (ui.tool === "highlight") {
-    map.dragging.disable();
-  } else {
-    map.dragging.enable();
-  }
+  // The eraser swaps the cursor for an eraser glyph so the mode is obvious.
+  map.getContainer().classList.toggle("eraser-mode", ui.tool === "eraser");
   const pm = geoman(map);
   if (!pm) {
     return;

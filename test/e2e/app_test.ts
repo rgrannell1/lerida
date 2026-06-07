@@ -57,7 +57,7 @@ async function drawLine(harness: Harness): Promise<void> {
   await harness.page.waitForSelector("[data-palette='feature']");
 }
 
-// Reveal the less-common tools (highlighter, polygon) hidden behind the "…" overflow.
+// Reveal the less-common tools (polygon) hidden behind the "…" overflow.
 async function revealTools(harness: Harness): Promise<void> {
   await harness.page.locator("[data-action='more-tools']").click();
   await harness.page.waitForSelector("[data-tool='polygon']");
@@ -75,7 +75,7 @@ Deno.test("app loads and renders the map without console errors", async () => {
     await openApp(harness);
     await harness.page.waitForSelector(TOOLBAR);
     // The common drawing tools (marker / line / text / eraser) show by default;
-    // highlighter and polygon hide behind the "…" overflow.
+    // polygon hides behind the "…" overflow.
     assertEquals(await harness.page.locator("[data-tool]").count(), 4);
     // Offline tile / favicon fetches 404 — those aside, nothing should error.
     const ignore = /tile|openstreetmap|net::|404|Failed to load/i;
@@ -510,28 +510,34 @@ Deno.test("the toolbar shows the Lerida title", async () => {
 Deno.test("the … toggle reveals the less-common tools", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
-    // Highlighter and polygon are hidden until the overflow is expanded.
-    assertEquals(await harness.page.locator("[data-tool='highlight']").count(), 0);
+    // Polygon is hidden until the overflow is expanded.
     assertEquals(await harness.page.locator("[data-tool='polygon']").count(), 0);
     await revealTools(harness);
-    assertEquals(await harness.page.locator("[data-tool='highlight']").count(), 1);
     assertEquals(await harness.page.locator("[data-tool='polygon']").count(), 1);
   });
 });
 
-Deno.test("the highlighter pen draws a freehand stroke into the URL", async () => {
+Deno.test("a draw hint shows while drawing a line and clears when the tool changes", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
-    // The highlighter lives behind the "…" tool overflow.
-    await revealTools(harness);
-    await harness.page.locator("[data-tool='highlight']").click();
-    // Press-drag across the map to trace a freehand stroke.
-    await harness.page.mouse.move(MAP_POINT_B.x, MAP_POINT_B.y);
-    await harness.page.mouse.down();
-    await harness.page.mouse.move(MAP_POINT.x, MAP_POINT.y, { steps: 12 });
-    await harness.page.mouse.up();
-    await harness.page.waitForFunction(() => location.search.includes("lines.0.highlight=true"));
-    assertStringIncludes(currentQuery(harness.page), "lines.0.highlight=true");
-    assertEquals(await harness.page.locator("[data-feature='line']").count(), 1);
+    assertEquals(await harness.page.locator("[data-role='draw-hint']").count(), 0);
+    await harness.page.locator("[data-tool='line']").click();
+    await harness.page.waitForSelector("[data-role='draw-hint']");
+    await harness.page.locator("[data-tool='marker']").click();
+    await harness.page.waitForFunction(() => !document.querySelector("[data-role='draw-hint']"));
+    assertEquals(await harness.page.locator("[data-role='draw-hint']").count(), 0);
+  });
+});
+
+Deno.test("the eraser tool puts the map into eraser-cursor mode", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    assertEquals(await harness.page.locator("#map.eraser-mode").count(), 0);
+    await harness.page.locator("[data-tool='eraser']").click();
+    await harness.page.waitForSelector("#map.eraser-mode");
+    // Switching to another tool clears the eraser cursor.
+    await harness.page.locator("[data-tool='marker']").click();
+    await harness.page.waitForFunction(() => !document.querySelector("#map.eraser-mode"));
+    assertEquals(await harness.page.locator("#map.eraser-mode").count(), 0);
   });
 });
