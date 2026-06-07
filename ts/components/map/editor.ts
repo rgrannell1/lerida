@@ -3,8 +3,8 @@
 
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
-import { syncToUrl } from "../state.ts";
-import { renderMarkdown } from "../markdown.ts";
+import { syncToUrl } from "../../state.ts";
+import { renderMarkdown } from "../../markdown.ts";
 import { isEditable, mapContext } from "./context.ts";
 
 // Any feature carrying a text label.

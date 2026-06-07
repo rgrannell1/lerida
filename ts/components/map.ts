@@ -7,17 +7,17 @@
 import m from "mithril";
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
-import { leaflet, type PmCreateEvent } from "../map/leaflet.ts";
+import { leaflet, type PmCreateEvent } from "./map/leaflet.ts";
 import { state, syncToUrl } from "../state.ts";
 import { ui } from "../ui.ts";
-import { isEditable, mapContext } from "../map/context.ts";
-import { addMarkerLayer, placeMarker } from "../map/markers.ts";
-import { addLineLayer, addPolygonLayer, onShapeCreated } from "../map/shapes.ts";
-import { addTextLayer, placeText } from "../map/text.ts";
-import { onKeyDown } from "../map/tools.ts";
+import { isEditable, mapContext } from "./map/context.ts";
+import { addMarkerLayer, placeMarker } from "./map/markers.ts";
+import { addLineLayer, addPolygonLayer, onShapeCreated } from "./map/shapes.ts";
+import { addTextLayer, placeText } from "./map/text.ts";
+import { onKeyDown } from "./map/tools.ts";
 
 // Re-exported for the toolbar, which imports these from "./map.ts".
-export { applyTool, clearFeatures } from "../map/tools.ts";
+export { applyTool, clearFeatures } from "./map/tools.ts";
 
 // Default viewport when the URL carries no state: Ireland.
 const DEFAULT_CENTER: [number, number] = [53.35, -6.26];

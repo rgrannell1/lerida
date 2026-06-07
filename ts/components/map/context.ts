@@ -3,7 +3,7 @@
 
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
-import { state } from "../state.ts";
+import { state } from "../../state.ts";
 
 export const mapContext: {
   // The live Leaflet map, so the toolbar's tool selection can drive draw mode.

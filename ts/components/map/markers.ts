@@ -3,10 +3,10 @@
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
 import { awesomeMarkers, leaflet } from "./leaflet.ts";
-import { state, syncToUrl } from "../state.ts";
-import { ui } from "../ui.ts";
-import { DEFAULT_COLOR, DEFAULT_FEATURE, iconFor } from "../features.ts";
-import type { Marker } from "../types.ts";
+import { state, syncToUrl } from "../../state.ts";
+import { ui } from "../../ui.ts";
+import { DEFAULT_COLOR, DEFAULT_FEATURE, iconFor } from "../../features.ts";
+import type { Marker } from "../../types.ts";
 import { dropFrom, markElement, wireFeature } from "./editor.ts";
 import { featureTarget } from "./context.ts";
 

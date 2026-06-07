@@ -2,7 +2,7 @@
 // (AwesomeMarkers, the polyline decorator, Geoman). Importing leaflet-setup here
 // guarantees Leaflet + plugins are loaded (as global L) before anything reads them.
 
-import "../leaflet-setup.ts";
+import "../../leaflet-setup.ts";
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
 

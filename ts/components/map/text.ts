@@ -4,11 +4,11 @@
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
 import { leaflet } from "./leaflet.ts";
-import { renderMarkdown } from "../markdown.ts";
-import { state, syncToUrl } from "../state.ts";
-import { ui } from "../ui.ts";
-import { colorHex, DEFAULT_COLOR, DEFAULT_SIZE, fontSizeFor } from "../features.ts";
-import type { TextLabel } from "../types.ts";
+import { renderMarkdown } from "../../markdown.ts";
+import { state, syncToUrl } from "../../state.ts";
+import { ui } from "../../ui.ts";
+import { colorHex, DEFAULT_COLOR, DEFAULT_SIZE, fontSizeFor } from "../../features.ts";
+import type { TextLabel } from "../../types.ts";
 import { dropFrom } from "./editor.ts";
 import { featureTarget, isEditable } from "./context.ts";
 

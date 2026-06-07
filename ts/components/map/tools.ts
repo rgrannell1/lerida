@@ -4,9 +4,9 @@
 // @deno-types="npm:@types/mithril@^2.2.7"
 import m from "mithril";
 import { geoman, type GeomanDrawOptions } from "./leaflet.ts";
-import { state, syncToUrl } from "../state.ts";
-import { ui } from "../ui.ts";
-import { colorHex } from "../features.ts";
+import { state, syncToUrl } from "../../state.ts";
+import { ui } from "../../ui.ts";
+import { colorHex } from "../../features.ts";
 import { isEditable, mapContext } from "./context.ts";
 
 // Style new shapes in the selected colour while drawing.

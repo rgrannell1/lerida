@@ -4,10 +4,10 @@
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
 import { decorators, leaflet, type PmCreateEvent } from "./leaflet.ts";
-import { state, syncToUrl } from "../state.ts";
-import { ui } from "../ui.ts";
-import { colorHex, DEFAULT_COLOR } from "../features.ts";
-import type { Line, Polygon } from "../types.ts";
+import { state, syncToUrl } from "../../state.ts";
+import { ui } from "../../ui.ts";
+import { colorHex, DEFAULT_COLOR } from "../../features.ts";
+import type { Line, Polygon } from "../../types.ts";
 import { dropFrom, markElement, wireFeature } from "./editor.ts";
 import { featureTarget } from "./context.ts";
 
