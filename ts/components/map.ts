@@ -15,6 +15,7 @@ import { addMarkerLayer, placeMarker } from "./map/markers.ts";
 import { addLineLayer, addPolygonLayer, onShapeCreated } from "./map/shapes.ts";
 import { addTextLayer, placeText } from "./map/text.ts";
 import { onKeyDown } from "./map/tools.ts";
+import { extendFreehand, finishFreehand, startFreehand } from "./map/freehand.ts";
 
 // Re-exported for the toolbar, which imports these from "./map.ts".
 export { applyTool, clearFeatures } from "./map/tools.ts";
@@ -109,6 +110,23 @@ export function MapView(): m.Component {
       map.on("moveend", () => captureView(map));
       map.on("zoomend", () => captureView(map));
       map.on("click", (event) => onMapClick(map, event));
+      // Highlighter pen: a press-drag traces a freehand stroke (panning is off
+      // while the pen tool is active, see applyTool).
+      map.on("mousedown", (event) => {
+        if (ui.tool === "highlight" && isEditable()) {
+          startFreehand(map, (event as Leaflet.LeafletMouseEvent).latlng);
+        }
+      });
+      map.on("mousemove", (event) => {
+        if (ui.tool === "highlight") {
+          extendFreehand(map, (event as Leaflet.LeafletMouseEvent).latlng);
+        }
+      });
+      map.on("mouseup", () => {
+        if (ui.tool === "highlight") {
+          finishFreehand(map);
+        }
+      });
       map.on("pm:create", (event) => {
         onShapeCreated(map, event as unknown as PmCreateEvent);
       });

@@ -12,4 +12,6 @@ export const ui = {
   selectedArrows: false,
   // Whether the feature palette shows the less-common categories (the "…" toggle).
   showAllFeatures: false,
+  // Whether the tool palette shows the less-common tools (the "…" toggle).
+  showAllTools: false,
 };

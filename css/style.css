@@ -44,7 +44,21 @@ body {
 /* Header row: clear button (left) and minimise button (right) above the palettes. */
 .toolbar-header {
   display: flex;
+  align-items: center;
   justify-content: space-between;
+}
+
+.toolbar-title {
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.02em;
+  color: #2b6cb0;
+  padding-left: 4px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 4px;
 }
 
 .palette {

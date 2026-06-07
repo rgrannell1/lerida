@@ -31,10 +31,14 @@ export function addLineLayer(map: Leaflet.Map, line: Line): void {
   const vertices = line.points.map((point) => [point.lat, point.lng] as [number, number]);
   const color = line.color ?? colorHex(DEFAULT_COLOR);
   const target = featureTarget(map);
-  const layer = leaflet.polyline(vertices, { color });
+  // The highlighter pen is a fat, translucent freehand stroke; a normal line is crisp.
+  const style = line.highlight
+    ? { color, weight: 14, opacity: 0.4, lineCap: "round" as const }
+    : { color };
+  const layer = leaflet.polyline(vertices, style);
   layer.addTo(target);
   markElement(layer, "line");
-  const decorator = line.arrows ? arrowDecorator(layer, color) : undefined;
+  const decorator = line.arrows && !line.highlight ? arrowDecorator(layer, color) : undefined;
   decorator?.addTo(target);
   wireFeature(layer, line, () => {
     state.lines = dropFrom(state.lines, line);

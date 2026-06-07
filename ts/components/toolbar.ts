@@ -18,19 +18,22 @@ import { state, syncToUrl } from "../state.ts";
 import { applyTool, clearFeatures } from "./map.ts";
 import { resizeFocusedText } from "./map/text.ts";
 
-// One drawing tool: its id, the glyph shown, and a hover/title label.
+// One drawing tool: its id, the glyph shown, a hover/title label, and whether it
+// is common enough to show before the "…" overflow toggle is expanded.
 interface Tool {
   id: string;
   glyph: string;
   title: string;
+  common?: boolean;
 }
 
 const TOOLS: Tool[] = [
-  { id: "marker", glyph: "map-marker", title: "Marker" },
-  { id: "line", glyph: "minus", title: "Line" },
+  { id: "marker", glyph: "map-marker", title: "Marker", common: true },
+  { id: "line", glyph: "minus", title: "Line", common: true },
+  { id: "text", glyph: "font", title: "Text", common: true },
+  { id: "eraser", glyph: "eraser", title: "Eraser", common: true },
+  { id: "highlight", glyph: "paint-brush", title: "Highlighter" },
   { id: "polygon", glyph: "square-o", title: "Polygon" },
-  { id: "text", glyph: "font", title: "Text" },
-  { id: "eraser", glyph: "eraser", title: "Eraser" },
 ];
 
 function selectTool(id: string): void {
@@ -58,6 +61,10 @@ function toggleArrows(): void {
 
 function toggleShowAllFeatures(): void {
   ui.showAllFeatures = !ui.showAllFeatures;
+}
+
+function toggleShowAllTools(): void {
+  ui.showAllTools = !ui.showAllTools;
 }
 
 // Render a Font Awesome glyph button (tool buttons), highlighted when active.
@@ -92,6 +99,13 @@ function featureButton(feature: Feature): m.Vnode {
 function moreFeaturesButton(): m.Vnode {
   return glyphButton("ellipsis-h", "More categories", ui.showAllFeatures, toggleShowAllFeatures, {
     "data-action": "more-features",
+  });
+}
+
+// The "…" toggle that reveals / hides the less-common tools (highlighter, polygon).
+function moreToolsButton(): m.Vnode {
+  return glyphButton("ellipsis-h", "More tools", ui.showAllTools, toggleShowAllTools, {
+    "data-action": "more-tools",
   });
 }
 
@@ -147,12 +161,22 @@ export function Toolbar(): m.Component {
         return m("div#toolbar.collapsed", { "data-role": "toolbar", "data-collapsed": "true" },
           toggleButton("sliders", "Show tools", "restore"));
       }
+      // Active non-common tool stays visible even when the overflow is collapsed.
+      const shownTools = TOOLS.filter((tool) =>
+        tool.common || ui.showAllTools || ui.tool === tool.id
+      );
       const rows = [
         m("div.toolbar-header", [
-          glyphButton("trash", "Clear all", false, clearFeatures, { "data-action": "clear" }),
-          toggleButton("chevron-up", "Minimise", "minimise"),
+          m("span.toolbar-title", "Lerida"),
+          m("div.toolbar-actions", [
+            glyphButton("trash", "Clear all", false, clearFeatures, { "data-action": "clear" }),
+            toggleButton("chevron-up", "Minimise", "minimise"),
+          ]),
         ]),
-        m("div.palette.tool-palette", { "data-palette": "tool" }, TOOLS.map(toolButton)),
+        m("div.palette.tool-palette", { "data-palette": "tool" }, [
+          ...shownTools.map(toolButton),
+          moreToolsButton(),
+        ]),
       ];
       // The category palette only applies to markers; the size palette to text.
       // Less-common categories hide behind a "…" toggle.

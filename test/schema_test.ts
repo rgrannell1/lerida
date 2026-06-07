@@ -53,6 +53,14 @@ const CASES: Case[] = [
       "lines.0.points.1.lat=3&lines.0.points.1.lng=4&lines.0.arrows=true",
   },
   {
+    name: "highlighter freehand stroke",
+    state: {
+      lines: [{ points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }], color: "yellow", highlight: true }],
+    },
+    params: "lines.0.points.0.lat=1&lines.0.points.0.lng=2&" +
+      "lines.0.points.1.lat=3&lines.0.points.1.lng=4&lines.0.color=yellow&lines.0.highlight=true",
+  },
+  {
     name: "text label with size",
     state: { texts: [{ lat: 1, lng: 2, text: "Hi", color: "blue", size: "large" }] },
     params: "texts.0.lat=1&texts.0.lng=2&texts.0.text=Hi&texts.0.color=blue&texts.0.size=large",

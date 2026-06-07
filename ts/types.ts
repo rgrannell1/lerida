@@ -23,12 +23,14 @@ export interface Marker {
 }
 
 // A polyline: an ordered list of vertices with an optional colour, label, and
-// directional arrows along its length.
+// directional arrows along its length. `highlight` renders it as a thick,
+// translucent freehand stroke (the highlighter pen) rather than a crisp line.
 export interface Line {
   points: LatLng[];
   color?: string;
   label?: string;
   arrows?: boolean;
+  highlight?: boolean;
 }
 
 // A polygon region: a list of boundary vertices with an optional colour and label.

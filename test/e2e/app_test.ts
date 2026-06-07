@@ -57,6 +57,12 @@ async function drawLine(harness: Harness): Promise<void> {
   await harness.page.waitForSelector("[data-palette='feature']");
 }
 
+// Reveal the less-common tools (highlighter, polygon) hidden behind the "…" overflow.
+async function revealTools(harness: Harness): Promise<void> {
+  await harness.page.locator("[data-action='more-tools']").click();
+  await harness.page.waitForSelector("[data-tool='polygon']");
+}
+
 Deno.test("app loads and renders the map without console errors", async () => {
   await withApp(async (harness) => {
     const errors: string[] = [];
@@ -68,8 +74,9 @@ Deno.test("app loads and renders the map without console errors", async () => {
     harness.page.on("pageerror", (error) => errors.push(error.message));
     await openApp(harness);
     await harness.page.waitForSelector(TOOLBAR);
-    // The drawing tools (marker / line / polygon / text / eraser) are present.
-    assertEquals(await harness.page.locator("[data-tool]").count(), 5);
+    // The common drawing tools (marker / line / text / eraser) show by default;
+    // highlighter and polygon hide behind the "…" overflow.
+    assertEquals(await harness.page.locator("[data-tool]").count(), 4);
     // Offline tile / favicon fetches 404 — those aside, nothing should error.
     const ignore = /tile|openstreetmap|net::|404|Failed to load/i;
     const real = errors.filter((text) => !ignore.test(text));
@@ -198,6 +205,7 @@ Deno.test("the category palette shows for markers and hides for line/polygon", a
     assertEquals(await harness.page.locator("[data-palette='feature']").count(), 1);
     await harness.page.locator("[data-tool='line']").click();
     assertEquals(await harness.page.locator("[data-palette='feature']").count(), 0);
+    await revealTools(harness);
     await harness.page.locator("[data-tool='polygon']").click();
     assertEquals(await harness.page.locator("[data-palette='feature']").count(), 0);
     await harness.page.locator("[data-tool='marker']").click();
@@ -273,6 +281,7 @@ Deno.test("the toolbar's selected category and colour apply to a new marker", as
 Deno.test("drawing a polygon (closing on the first vertex) writes it to the URL", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
+    await revealTools(harness);
     await harness.page.locator("[data-tool='polygon']").click();
     // Click three vertices, then click the first again to close the ring.
     const first = { x: 500, y: 350 };
@@ -488,5 +497,41 @@ Deno.test("resizing a not-yet-typed label does not write an empty label to the U
     await harness.page.locator("[data-size='large']").click();
     await harness.page.waitForTimeout(150);
     assert(!currentQuery(harness.page).includes("texts."), "empty label must not be encoded");
+  });
+});
+
+Deno.test("the toolbar shows the Lerida title", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    assertEquals(await harness.page.locator(".toolbar-title").textContent(), "Lerida");
+  });
+});
+
+Deno.test("the … toggle reveals the less-common tools", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // Highlighter and polygon are hidden until the overflow is expanded.
+    assertEquals(await harness.page.locator("[data-tool='highlight']").count(), 0);
+    assertEquals(await harness.page.locator("[data-tool='polygon']").count(), 0);
+    await revealTools(harness);
+    assertEquals(await harness.page.locator("[data-tool='highlight']").count(), 1);
+    assertEquals(await harness.page.locator("[data-tool='polygon']").count(), 1);
+  });
+});
+
+Deno.test("the highlighter pen draws a freehand stroke into the URL", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // The highlighter lives behind the "…" tool overflow.
+    await revealTools(harness);
+    await harness.page.locator("[data-tool='highlight']").click();
+    // Press-drag across the map to trace a freehand stroke.
+    await harness.page.mouse.move(MAP_POINT_B.x, MAP_POINT_B.y);
+    await harness.page.mouse.down();
+    await harness.page.mouse.move(MAP_POINT.x, MAP_POINT.y, { steps: 12 });
+    await harness.page.mouse.up();
+    await harness.page.waitForFunction(() => location.search.includes("lines.0.highlight=true"));
+    assertStringIncludes(currentQuery(harness.page), "lines.0.highlight=true");
+    assertEquals(await harness.page.locator("[data-feature='line']").count(), 1);
   });
 });
