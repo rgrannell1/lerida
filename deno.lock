@@ -559,6 +559,13 @@
       "integrity": "sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w=="
     }
   },
+  "remote": {
+    "https://raw.githubusercontent.com/rgrannell1/cycle/730d545148bcc23a40e91aa9807b31a6fe974a58/src/decode.ts": "c8da3b7678d00de5409761c58572a8b9d4e09a71f49a85eb29b3739b37a2c250",
+    "https://raw.githubusercontent.com/rgrannell1/cycle/730d545148bcc23a40e91aa9807b31a6fe974a58/src/encode.ts": "a8e5b109c48b5ce8b4df4d295487eb6aca677b53be8701ecd1af8f4a8a51d79c",
+    "https://raw.githubusercontent.com/rgrannell1/cycle/730d545148bcc23a40e91aa9807b31a6fe974a58/src/mod.ts": "c7768ddaecf128c32d1e7e00f923b6d2d828bbc4d315a9283b548edf10e3ba34",
+    "https://raw.githubusercontent.com/rgrannell1/cycle/730d545148bcc23a40e91aa9807b31a6fe974a58/src/schema.ts": "3e9d445b7c433601fa680915c516069851b687edeec6cbf025172546f271195d",
+    "https://raw.githubusercontent.com/rgrannell1/cycle/730d545148bcc23a40e91aa9807b31a6fe974a58/src/types.ts": "2d05695cedf88df572c4d086b69daa5d974674e0453d64695ac35a456e3f50af"
+  },
   "workspace": {
     "dependencies": [
       "jsr:@luca/esbuild-deno-loader@~0.11.1",
