@@ -1,0 +1,173 @@
+/* lerida — full-viewport map. */
+:root {
+  --map-bg: #0b0f14;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+}
+
+#app,
+#map {
+  height: 100vh;
+  width: 100%;
+}
+
+#map {
+  background: var(--map-bg);
+}
+
+/* Marker palette overlaid on the map. Palettes wrap so it fits narrow screens. */
+#toolbar {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: calc(100vw - 24px);
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  border-radius: 10px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Minimised toolbar — just the restore button. */
+#toolbar.collapsed {
+  padding: 4px;
+}
+
+/* Header row: clear button (left) and minimise button (right) above the palettes. */
+.toolbar-header {
+  display: flex;
+  justify-content: space-between;
+}
+
+.palette {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.icon-button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  cursor: pointer;
+  font-size: 18px;
+  color: #333;
+  touch-action: manipulation;
+}
+
+.icon-button:hover {
+  background: #eee;
+}
+
+.icon-button.selected {
+  border-color: #3388ff;
+  background: #e7f0ff;
+}
+
+.color-button {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.color-button.selected {
+  border-color: #333;
+  box-shadow: inset 0 0 0 2px #fff;
+}
+
+/* Instant hover tooltip for toolbar buttons, drawn from each button's title
+   (the native title tooltip only appears after a long delay). */
+.icon-button,
+.color-button {
+  position: relative;
+}
+
+.icon-button:hover::after,
+.color-button:hover::after {
+  content: attr(title);
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.82);
+  color: #fff;
+  font-size: 11px;
+  line-height: 1.4;
+  pointer-events: none;
+  z-index: 1100;
+}
+
+/* Free text labels placed on the map: fixed screen size, swatch colour, with a
+   white outline for legibility. The wrapper overrides Leaflet's divIcon sizing. */
+.map-text-wrapper {
+  width: auto !important;
+  height: auto !important;
+  background: none;
+  border: none;
+}
+
+.map-text {
+  display: inline-block;
+  min-width: 8px;
+  white-space: nowrap;
+  padding: 2px 5px;
+  font-weight: 600;
+  line-height: 1.2;
+  cursor: text;
+  outline: none;
+  background: #fff;
+  border-radius: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+/* Rendered markdown links take the label's colour, underlined. */
+.map-text a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+/* Label editor inside a feature popup: a text field plus a delete button. */
+.label-editor {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 16px font avoids iOS focus-zoom. */
+.marker-label-input {
+  width: 160px;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  font-size: 16px;
+}
+
+.label-delete {
+  border: none;
+  background: none;
+  color: #c0392b;
+  cursor: pointer;
+  font-size: 15px;
+  padding: 2px 4px;
+}
+
+.label-delete:hover {
+  color: #e74c3c;
+}
