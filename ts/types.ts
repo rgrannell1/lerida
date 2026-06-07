@@ -29,6 +29,7 @@ export interface Line {
   color?: string;
   label?: string;
   arrows?: boolean;
+  width?: number;
 }
 
 // A polygon region: a list of boundary vertices with an optional colour and label.

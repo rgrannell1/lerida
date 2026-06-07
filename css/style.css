@@ -42,11 +42,15 @@ body {
   padding: 4px;
 }
 
-/* Header row: clear button (left) and minimise button (right) above the palettes. */
+/* Header row: clear button (left) and minimise button (right) above the palettes.
+   Doubles as the drag handle for repositioning the whole toolbar; `touch-action:
+   none` stops a touch-drag here from scrolling/zooming the page instead. */
 .toolbar-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  cursor: move;
+  touch-action: none;
 }
 
 .toolbar-title {
@@ -150,6 +154,26 @@ body {
   flex-wrap: wrap;
   gap: 4px;
   justify-content: center;
+}
+
+/* Shown in place of the tool palette while a feature is being edited: names the
+   feature whose properties the palettes below now change. */
+.editing-banner {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  color: #2c7da0;
+  padding: 2px 0;
+}
+
+/* The bar inside a line-width button — its height is the stroke weight. */
+.width-bar {
+  display: block;
+  width: 22px;
+  border-radius: 2px;
+  background: #333;
 }
 
 .icon-button {

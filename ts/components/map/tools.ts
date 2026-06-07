@@ -9,9 +9,10 @@ import { ui } from "../../ui.ts";
 import { colorHex } from "../../features.ts";
 import { isEditable, mapContext } from "./context.ts";
 
-// Style new shapes in the selected colour while drawing.
+// Style new shapes in the selected colour while drawing. Lines also preview at
+// the selected stroke weight so the draw matches the committed line.
 function drawOptions(): GeomanDrawOptions {
-  const style = { color: colorHex(ui.selectedColor) };
+  const style = { color: colorHex(ui.selectedColor), weight: ui.selectedWidth };
   return { templineStyle: style, hintlineStyle: style, pathOptions: style };
 }
 

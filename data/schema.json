@@ -79,7 +79,8 @@
         },
         "color": { "type": "string", "description": "Stroke colour (CSS)." },
         "label": { "type": "string", "description": "Text label shown as a tooltip." },
-        "arrows": { "type": "boolean", "description": "Show directional arrows along the line." }
+        "arrows": { "type": "boolean", "description": "Show directional arrows along the line." },
+        "width": { "type": "number", "description": "Stroke weight in pixels." }
       }
     },
     "Polygon": {

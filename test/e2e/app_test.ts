@@ -8,7 +8,7 @@
 // third-party libraries and change without notice.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { currentQuery, type Harness, launch, openApp } from "./helpers.ts";
+import { currentQuery, type Harness, launch, openApp, waitForParams } from "./helpers.ts";
 
 // Selectors keyed off our own data-* attributes.
 const PIN = "[data-feature='marker']";
@@ -41,7 +41,7 @@ async function withApp(body: (harness: Harness) => Promise<void>): Promise<void>
 // data-* attribute of ours) and wait for the zoom to be written to the URL.
 async function zoomIn(harness: Harness): Promise<void> {
   await harness.page.locator(".leaflet-control-zoom-in").click();
-  await harness.page.waitForFunction(() => location.search.includes("view.zoom="));
+  await waitForParams(harness, (query) => query.includes("view.zoom="));
 }
 
 // Draw a two-vertex line and wait for it to reach the URL. The shape is finished
@@ -53,7 +53,7 @@ async function drawLine(harness: Harness): Promise<void> {
   await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
   await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
   await harness.page.keyboard.press("Escape");
-  await harness.page.waitForFunction(() => location.search.includes("lines.0.points.0.lat="));
+  await waitForParams(harness, (query) => query.includes("lines.0.points.0.lat="));
   await harness.page.waitForSelector("[data-palette='feature']");
 }
 
@@ -136,7 +136,7 @@ Deno.test("clicking a marker opens the label editor; Enter commits the label", a
     await input.waitFor();
     await input.fill("Home");
     await input.press("Enter");
-    await harness.page.waitForFunction(() => location.search.includes("markers.0.label=Home"));
+    await waitForParams(harness, (query) => query.includes("markers.0.label=Home"));
     assertStringIncludes(currentQuery(harness.page), "markers.0.label=Home");
   });
 });
@@ -166,7 +166,7 @@ Deno.test("the text tool places an editable label; typing writes it to the URL",
     await editable.waitFor();
     await editable.type("Cork");
     await editable.press("Enter");
-    await harness.page.waitForFunction(() => location.search.includes("texts.0.text=Cork"));
+    await waitForParams(harness, (query) => query.includes("texts.0.text=Cork"));
     assertStringIncludes(currentQuery(harness.page), "texts.0.text=Cork");
   });
 });
@@ -175,7 +175,7 @@ Deno.test("the toolbar minimises into the URL and survives a reload", async () =
   await withApp(async (harness) => {
     await openApp(harness);
     await harness.page.locator("[data-action='minimise']").click();
-    await harness.page.waitForFunction(() => location.search.includes("collapsed=true"));
+    await waitForParams(harness, (query) => query.includes("collapsed=true"));
     assertStringIncludes(currentQuery(harness.page), "collapsed=true");
     // Collapsed → only the restore button is shown, the palettes are gone.
     await harness.page.waitForSelector("[data-action='restore']");
@@ -241,7 +241,7 @@ Deno.test("drawing a line writes a polyline into the URL", async () => {
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.mouse.dblclick(MAP_POINT.x, MAP_POINT.y);
-    await harness.page.waitForFunction(() => location.search.includes("lines.0.points.0.lat="));
+    await waitForParams(harness, (query) => query.includes("lines.0.points.0.lat="));
     const query = currentQuery(harness.page);
     assertStringIncludes(query, "lines.0.points.0.lat=");
     assertStringIncludes(query, "lines.0.points.1.lat=");
@@ -289,7 +289,7 @@ Deno.test("drawing a polygon (closing on the first vertex) writes it to the URL"
     await harness.page.mouse.click(720, 360);
     await harness.page.mouse.click(620, 520);
     await harness.page.mouse.click(first.x, first.y);
-    await harness.page.waitForFunction(() => location.search.includes("polygons.0.points.0.lat="));
+    await waitForParams(harness, (query) => query.includes("polygons.0.points.0.lat="));
     const query = currentQuery(harness.page);
     assertStringIncludes(query, "polygons.0.points.0.lat=");
     assertStringIncludes(query, "polygons.0.points.2.lat=");
@@ -305,7 +305,7 @@ Deno.test("toggling directional arrows draws a line with arrows in the URL", asy
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.mouse.dblclick(MAP_POINT.x, MAP_POINT.y);
-    await harness.page.waitForFunction(() => location.search.includes("lines.0.arrows=true"));
+    await waitForParams(harness, (query) => query.includes("lines.0.arrows=true"));
     assertStringIncludes(currentQuery(harness.page), "lines.0.arrows=true");
   });
 });
@@ -318,7 +318,7 @@ Deno.test("Escape commits an in-progress line and returns to the marker tool", a
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.keyboard.press("Escape");
-    await harness.page.waitForFunction(() => location.search.includes("lines.0.points.0.lat="));
+    await waitForParams(harness, (query) => query.includes("lines.0.points.0.lat="));
     assertStringIncludes(currentQuery(harness.page), "lines.0.points.0.lat=");
     // The tool falls back to marker — its category palette reappears.
     await harness.page.waitForSelector("[data-palette='feature']");
@@ -348,7 +348,7 @@ Deno.test("a line can be labelled via the shared editor", async () => {
     await input.waitFor();
     await input.fill("Route");
     await input.press("Enter");
-    await harness.page.waitForFunction(() => location.search.includes("lines.0.label=Route"));
+    await waitForParams(harness, (query) => query.includes("lines.0.label=Route"));
     assertStringIncludes(currentQuery(harness.page), "lines.0.label=Route");
   });
 });
@@ -358,7 +358,7 @@ Deno.test("right-clicking a line removes it from the URL", async () => {
     await openApp(harness);
     await drawLine(harness);
     await harness.page.mouse.click(LINE_MID.x, LINE_MID.y, { button: "right" });
-    await harness.page.waitForFunction(() => !location.search.includes("lines."));
+    await waitForParams(harness, (query) => !query.includes("lines."));
     assert(!currentQuery(harness.page).includes("lines."), "line should be gone from the URL");
   });
 });
@@ -435,7 +435,7 @@ Deno.test("the restore button re-expands a collapsed toolbar", async () => {
     await harness.page.locator("[data-action='restore']").click();
     // Expanded again: the tool palette returns and the URL drops the flag.
     await harness.page.waitForSelector("[data-palette='tool']");
-    await harness.page.waitForFunction(() => !location.search.includes("collapsed"));
+    await waitForParams(harness, (query) => !query.includes("collapsed"));
     assert(!currentQuery(harness.page).includes("collapsed"), "collapsed flag should be cleared");
   });
 });
@@ -445,10 +445,10 @@ Deno.test("the eraser tool removes a feature on click", async () => {
     await openApp(harness);
     // Place a marker, then switch to the eraser and click it away.
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
-    await harness.page.waitForFunction(() => location.search.includes("markers.0."));
+    await waitForParams(harness, (query) => query.includes("markers.0."));
     await harness.page.locator("[data-tool='eraser']").click();
     await harness.page.locator(PIN).click();
-    await harness.page.waitForFunction(() => !location.search.includes("markers.0."));
+    await waitForParams(harness, (query) => !query.includes("markers.0."));
     assert(!currentQuery(harness.page).includes("markers"), "the marker should be erased");
   });
 });
@@ -462,6 +462,41 @@ Deno.test("the … toggle reveals the less-common categories", async () => {
     await harness.page.locator("[data-action='more-features']").click();
     await harness.page.waitForSelector("[data-feature-id='airport']");
     assertEquals(await harness.page.locator("[data-feature-id='airport']").count(), 1);
+  });
+});
+
+Deno.test("the category palette has a fashion category and no parking one", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-action='more-features']").click();
+    await harness.page.waitForSelector("[data-feature-id='fashion']");
+    assertEquals(await harness.page.locator("[data-feature-id='fashion']").count(), 1);
+    assertEquals(await harness.page.locator("[data-feature-id='parking']").count(), 0);
+  });
+});
+
+Deno.test("the toolbar can be dragged and resets to its default spot on reload", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    const toolbar = harness.page.locator(TOOLBAR);
+    const before = (await toolbar.boundingBox())!;
+    // Grab the header in its empty middle (clear of the title / action buttons).
+    const header = (await harness.page.locator(".toolbar-header").boundingBox())!;
+    const grabX = header.x + header.width / 2;
+    const grabY = header.y + header.height / 2;
+    await harness.page.mouse.move(grabX, grabY);
+    await harness.page.mouse.down();
+    await harness.page.mouse.move(grabX - 150, grabY + 120, { steps: 8 });
+    await harness.page.mouse.up();
+    const after = (await toolbar.boundingBox())!;
+    assert(Math.abs(after.x - before.x) > 50, "toolbar should have moved horizontally");
+    assert(after.y - before.y > 50, "toolbar should have moved down");
+    // The position is ephemeral — a reload returns it to the default spot.
+    await harness.page.reload();
+    await harness.page.waitForSelector(TOOLBAR);
+    const reloaded = (await toolbar.boundingBox())!;
+    assert(Math.abs(reloaded.x - before.x) < 5, "toolbar x should reset on reload");
+    assert(Math.abs(reloaded.y - before.y) < 5, "toolbar y should reset on reload");
   });
 });
 
@@ -482,7 +517,7 @@ Deno.test("the size palette resizes the focused text label", async () => {
     await editable.type("hi");
     // The label is still focused; picking a size resizes it in place.
     await harness.page.locator("[data-size='xlarge']").click();
-    await harness.page.waitForFunction(() => location.search.includes("texts.0.size=xlarge"));
+    await waitForParams(harness, (query) => query.includes("texts.0.size=xlarge"));
     assertStringIncludes(currentQuery(harness.page), "texts.0.size=xlarge");
   });
 });
@@ -529,6 +564,20 @@ Deno.test("a draw hint shows while drawing a line and clears when the tool chang
   });
 });
 
+Deno.test("the line-width palette sets the stroke width of a new line", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-tool='line']").click();
+    // Pick the thick (8px) width, then draw a two-vertex line.
+    await harness.page.locator("[data-width='8']").click();
+    await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.keyboard.press("Escape");
+    await waitForParams(harness, (query) => query.includes("lines.0.width=8"));
+    assertStringIncludes(currentQuery(harness.page), "lines.0.width=8");
+  });
+});
+
 Deno.test("clicking the brand title opens the about view, and it closes again", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
@@ -556,5 +605,34 @@ Deno.test("the eraser tool puts the map into eraser-cursor mode", async () => {
     await harness.page.locator("[data-tool='marker']").click();
     await harness.page.waitForFunction(() => !document.querySelector("#map.eraser-mode"));
     assertEquals(await harness.page.locator("#map.eraser-mode").count(), 0);
+  });
+});
+
+Deno.test("editing a placed marker recolours it via the toolbar", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // Place a marker (the default colour is blue), then click it to edit.
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.waitForSelector(PIN);
+    await waitForParams(harness, (query) => query.includes("markers.0.color=blue"));
+    await harness.page.locator(PIN).click();
+    // The toolbar switches to editing-the-marker mode and exposes the palettes.
+    await harness.page.waitForSelector("[data-role='editing'][data-editing='marker']");
+    await harness.page.locator("[data-color='red']").click();
+    await waitForParams(harness, (query) => query.includes("markers.0.color=red"));
+    assertStringIncludes(currentQuery(harness.page), "markers.0.color=red");
+  });
+});
+
+Deno.test("editing a placed line changes its width via the toolbar", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await drawLine(harness);
+    // Click the line to select it; the width palette then targets it.
+    await harness.page.mouse.click(LINE_MID.x, LINE_MID.y);
+    await harness.page.waitForSelector("[data-role='editing'][data-editing='line']");
+    await harness.page.locator("[data-width='8']").click();
+    await waitForParams(harness, (query) => query.includes("lines.0.width=8"));
+    assertStringIncludes(currentQuery(harness.page), "lines.0.width=8");
   });
 });

@@ -9,6 +9,8 @@ import {
   type ColorSwatch,
   type Feature,
   FEATURES,
+  type LineWidth,
+  LINE_WIDTHS,
   MARKER_COLORS,
   type TextSize,
   TEXT_SIZES,
@@ -16,7 +18,8 @@ import {
 import { ui } from "../ui.ts";
 import { state, syncToUrl } from "../state.ts";
 import { applyTool, clearFeatures } from "./map.ts";
-import { resizeFocusedText } from "./map/text.ts";
+import { selection } from "./map/selection.ts";
+import { startToolbarDrag, toolbarStyle } from "./toolbar-drag.ts";
 
 // One drawing tool: its id, the glyph shown, a hover/title label, and whether it
 // is common enough to show before the "…" overflow toggle is expanded.
@@ -41,21 +44,50 @@ function selectTool(id: string): void {
 }
 
 function selectFeature(id: string): void {
-  ui.selectedFeature = id;
+  const channel = selection.current?.feature;
+  if (channel) {
+    channel.set(id);
+  } else {
+    ui.selectedFeature = id;
+  }
 }
 
 function selectColor(name: string): void {
-  ui.selectedColor = name;
+  // While a feature is selected the palette recolours it; otherwise it sets the
+  // colour for the next feature placed.
+  const channel = selection.current?.color;
+  if (channel) {
+    channel.set(name);
+  } else {
+    ui.selectedColor = name;
+  }
 }
 
 function selectSize(id: string): void {
-  ui.selectedSize = id;
-  // Also resize the text label currently being edited, if any.
-  resizeFocusedText(id);
+  const channel = selection.current?.size;
+  if (channel) {
+    channel.set(id);
+  } else {
+    ui.selectedSize = id;
+  }
+}
+
+function selectWidth(px: number): void {
+  const channel = selection.current?.width;
+  if (channel) {
+    channel.set(px);
+  } else {
+    ui.selectedWidth = px;
+  }
 }
 
 function toggleArrows(): void {
-  ui.selectedArrows = !ui.selectedArrows;
+  const channel = selection.current?.arrows;
+  if (channel) {
+    channel.set(!channel.get());
+  } else {
+    ui.selectedArrows = !ui.selectedArrows;
+  }
 }
 
 function toggleShowAllFeatures(): void {
@@ -92,7 +124,8 @@ function toolButton(tool: Tool): m.Vnode {
 
 // Render a POI-category button showing its glyph, highlighted when selected.
 function featureButton(feature: Feature): m.Vnode {
-  const active = ui.selectedFeature === feature.id;
+  const current = selection.current?.feature ? selection.current.feature.get() : ui.selectedFeature;
+  const active = current === feature.id;
   return glyphButton(feature.icon, feature.name, active, () => selectFeature(feature.id), {
     "data-feature-id": feature.id,
   });
@@ -114,7 +147,8 @@ function moreToolsButton(): m.Vnode {
 
 // A text-size button showing a scaled "A", highlighted when selected.
 function sizeButton(size: TextSize): m.Vnode {
-  const active = ui.selectedSize === size.id;
+  const current = selection.current?.size ? selection.current.size.get() : ui.selectedSize;
+  const active = current === size.id;
   const selector = active ? "button.icon-button.selected" : "button.icon-button";
   const letter = m("span", { style: `font-size:${Math.min(size.px, 22)}px` }, "A");
   return m(selector, {
@@ -126,12 +160,29 @@ function sizeButton(size: TextSize): m.Vnode {
   }, letter);
 }
 
+// A line-thickness button showing a bar at that stroke weight, highlighted when selected.
+function widthButton(width: LineWidth): m.Vnode {
+  const current = selection.current?.width ? selection.current.width.get() : ui.selectedWidth;
+  const active = current === width.px;
+  const selector = active ? "button.icon-button.selected" : "button.icon-button";
+  const bar = m("span.width-bar", { style: `height:${width.px}px` });
+  return m(selector, {
+    title: width.name,
+    onclick: () => selectWidth(width.px),
+    "data-width": String(width.px),
+  }, bar);
+}
+
 function colorButton(swatch: ColorSwatch): m.Vnode {
-  const selected = ui.selectedColor === swatch.name;
+  // Highlight the selected feature's colour when editing one, else the default.
+  const current = selection.current?.color ? selection.current.color.get() : ui.selectedColor;
+  const selected = current === swatch.name;
   const selector = selected ? "button.color-button.selected" : "button.color-button";
   return m(selector, {
     title: swatch.name,
     style: `background:${swatch.hex}`,
+    // Keep a focused text label focused so the click can recolour it.
+    onmousedown: (event: MouseEvent) => event.preventDefault(),
     onclick: () => selectColor(swatch.name),
     "data-color": swatch.name,
   });
@@ -161,15 +212,22 @@ export function Toolbar(): m.Component {
         return null;
       }
       if (state.collapsed) {
-        return m("div#toolbar.collapsed", { "data-role": "toolbar", "data-collapsed": "true" },
-          toggleButton("sliders", "Show tools", "restore"));
+        return m("div#toolbar.collapsed", {
+          "data-role": "toolbar",
+          "data-collapsed": "true",
+          style: toolbarStyle(),
+        }, toggleButton("sliders", "Show tools", "restore"));
       }
+      // While a feature is selected the palettes target it — show those it
+      // exposes; otherwise they follow the active tool (for the next feature).
+      const sel = selection.current;
+      const shows = (has: boolean, toolId: string) => (sel ? has : ui.tool === toolId);
       // Active non-common tool stays visible even when the overflow is collapsed.
       const shownTools = TOOLS.filter((tool) =>
         tool.common || ui.showAllTools || ui.tool === tool.id
       );
       const rows = [
-        m("div.toolbar-header", [
+        m("div.toolbar-header", { onpointerdown: startToolbarDrag }, [
           m("button.toolbar-title", {
             title: "About lerida",
             onclick: openAbout,
@@ -180,14 +238,25 @@ export function Toolbar(): m.Component {
             toggleButton("chevron-up", "Minimise", "minimise"),
           ]),
         ]),
-        m("div.palette.tool-palette", { "data-palette": "tool" }, [
-          ...shownTools.map(toolButton),
-          moreToolsButton(),
-        ]),
       ];
-      // The category palette only applies to markers; the size palette to text.
-      // Less-common categories hide behind a "…" toggle.
-      if (ui.tool === "marker") {
+      // Editing a feature replaces the tool palette with a cue naming it; the
+      // palettes below act on the selection. Closing its editor restores tools.
+      if (sel) {
+        rows.push(
+          m("div.editing-banner", { "data-role": "editing", "data-editing": sel.kind },
+            `Editing ${sel.kind}`),
+        );
+      } else {
+        rows.push(
+          m("div.palette.tool-palette", { "data-palette": "tool" }, [
+            ...shownTools.map(toolButton),
+            moreToolsButton(),
+          ]),
+        );
+      }
+      // The category palette applies to markers; size to text; width + arrows to
+      // lines. Less-common categories hide behind a "…" toggle.
+      if (shows(!!sel?.feature, "marker")) {
         const shown = FEATURES.filter((feature) => feature.common || ui.showAllFeatures);
         rows.push(
           m("div.palette.feature-palette", {
@@ -195,31 +264,40 @@ export function Toolbar(): m.Component {
           }, [...shown.map(featureButton), moreFeaturesButton()]),
         );
       }
-      if (ui.tool === "text") {
+      if (shows(!!sel?.size, "text")) {
         rows.push(
           m("div.palette.size-palette", { "data-palette": "size" }, TEXT_SIZES.map(sizeButton)),
         );
       }
-      // The line tool offers a directional-arrows toggle.
-      if (ui.tool === "line") {
+      if (shows(!!sel?.width, "line")) {
+        rows.push(
+          m("div.palette.width-palette", { "data-palette": "width" }, LINE_WIDTHS.map(widthButton)),
+        );
+      }
+      if (shows(!!sel?.arrows, "line")) {
+        const arrowsActive = sel?.arrows ? sel.arrows.get() : ui.selectedArrows;
         const arrowsBtn = glyphButton(
           "long-arrow-right",
           "Directional arrows",
-          ui.selectedArrows,
+          arrowsActive,
           toggleArrows,
           { "data-action": "arrows" },
         );
         rows.push(m("div.palette.arrows-palette", { "data-palette": "arrows" }, arrowsBtn));
       }
-      // Colour applies to every tool that creates a feature — but not the eraser.
-      if (ui.tool !== "eraser") {
+      // Colour applies to any selection and to every feature-creating tool (not the eraser).
+      if (sel ? !!sel.color : ui.tool !== "eraser") {
         rows.push(
           m("div.palette.color-palette", {
             "data-palette": "color",
           }, MARKER_COLORS.map(colorButton)),
         );
       }
-      return m("div#toolbar", { "data-role": "toolbar" }, rows);
+      return m("div#toolbar", {
+        "data-role": "toolbar",
+        "data-editing": sel?.kind ?? "",
+        style: toolbarStyle(),
+      }, rows);
     },
   };
 }

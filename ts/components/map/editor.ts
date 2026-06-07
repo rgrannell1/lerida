@@ -7,6 +7,7 @@ import { syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
 import { renderMarkdown } from "../../markdown.ts";
 import { isEditable, mapContext } from "./context.ts";
+import { clearSelection, select, type Selection } from "./selection.ts";
 
 // True when the eraser tool is active: clicking any feature removes it instead
 // of editing it. The single source of the eraser rule, shared by every feature
@@ -100,13 +101,17 @@ export function markElement(layer: Leaflet.Layer, kind: string): void {
 // Wire a feature layer: tooltip, tap-to-edit, and right-click / long-press remove.
 // Vector features (consumesClick) also flag the click so the map handler skips
 // placing a marker on top of them.
+// `buildSelection` (optional) yields the property bindings the toolbar palettes
+// edit while this feature's editor is open; the selection clears on popup close.
 export function wireFeature(
   layer: Leaflet.Layer,
   target: Labelled,
   remove: () => void,
   consumesClick: boolean,
+  buildSelection?: () => Selection,
 ): void {
   applyTooltip(layer, target);
+  layer.on("popupclose", () => clearSelection(layer));
   layer.on("click", (event) => {
     if (!isEditable()) {
       return;
@@ -120,6 +125,9 @@ export function wireFeature(
       mapContext.consumedClick = (event as Leaflet.LeafletMouseEvent).originalEvent;
     }
     openEditor(target, layer, remove);
+    if (buildSelection) {
+      select(buildSelection());
+    }
   });
   layer.on("contextmenu", (event) => {
     if (!isEditable()) {

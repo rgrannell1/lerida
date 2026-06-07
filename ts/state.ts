@@ -3,7 +3,7 @@
 // syncToUrl encodes it back, keeping the URL the single source of truth.
 
 import { type StateObject } from "cycle";
-import { codec } from "./schema.ts";
+import { decodeUrl, encodeUrl } from "./url.ts";
 import type { MapState } from "./types.ts";
 
 // In-memory map state — the single object the map component renders from.
@@ -11,7 +11,7 @@ export const state: MapState = {};
 
 // Decode the current URL query string into `state`.
 export function loadFromUrl(): void {
-  const decoded = codec.decode(globalThis.location.search) as MapState;
+  const decoded = decodeUrl(globalThis.location.search);
   state.view = decoded.view;
   state.markers = decoded.markers ?? [];
   state.lines = decoded.lines ?? [];
@@ -56,7 +56,7 @@ function snapshot(): StateObject {
 
 // Encode `state` into the URL query string without reloading the page.
 export function syncToUrl(): void {
-  const query = codec.encode(snapshot()).toString();
+  const query = encodeUrl(snapshot());
   const target = query ? `?${query}` : globalThis.location.pathname;
   globalThis.history.replaceState(null, "", target);
 }

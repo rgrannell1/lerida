@@ -7,28 +7,11 @@ import { leaflet } from "./leaflet.ts";
 import { renderMarkdown } from "../../markdown.ts";
 import { state, syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
-import { colorHex, DEFAULT_COLOR, DEFAULT_SIZE, fontSizeFor } from "../../features.ts";
+import { colorHex, DEFAULT_COLOR, DEFAULT_SIZE, fontSizeFor, swatchName } from "../../features.ts";
 import type { TextLabel } from "../../types.ts";
 import { dropFrom, eraserActive } from "./editor.ts";
 import { featureTarget, isEditable } from "./context.ts";
-
-// The text label currently being edited, so the size palette can resize it.
-let focusedText: { item: TextLabel; element: HTMLElement } | undefined;
-
-// Apply a size to the text label currently being edited (if any). Called by the
-// toolbar's size palette.
-export function resizeFocusedText(sizeId: string): void {
-  if (!focusedText) {
-    return;
-  }
-  focusedText.item.size = sizeId;
-  focusedText.element.style.fontSize = `${fontSizeFor(sizeId)}px`;
-  // A not-yet-typed label isn't committed to the URL until it has text — don't
-  // let a resize write an empty label (blur discards it).
-  if (focusedText.item.text.trim().length > 0) {
-    syncToUrl();
-  }
-}
+import { clearSelection, select, type Selection } from "./selection.ts";
 
 // Commit a text label on blur: drop it if it ended up empty, then write the URL.
 function commitText(textItem: TextLabel, layer: Leaflet.Marker): void {
@@ -67,11 +50,37 @@ export function addTextLayer(map: Leaflet.Map, textItem: TextLabel, focus: boole
   }
   editable.contentEditable = "true";
   editable.spellcheck = false;
+  // A not-yet-typed label isn't committed to the URL until it has text — a style
+  // edit shouldn't write an empty label (blur discards it).
+  const syncIfTyped = () => {
+    if (textItem.text.trim().length > 0) {
+      syncToUrl();
+    }
+  };
+  // The toolbar's colour / size palettes edit the focused label.
+  const buildSelection = (): Selection => ({
+    kind: "text",
+    layer,
+    color: {
+      get: () => swatchName(textItem.color),
+      set: (name) => {
+        textItem.color = colorHex(name);
+        editable.style.color = textItem.color;
+        syncIfTyped();
+      },
+    },
+    size: {
+      get: () => textItem.size ?? DEFAULT_SIZE,
+      set: (id) => {
+        textItem.size = id;
+        editable.style.fontSize = `${fontSizeFor(id)}px`;
+        syncIfTyped();
+      },
+    },
+  });
   // Remove this label from state and the map.
   const removeTextItem = () => {
-    if (focusedText?.item === textItem) {
-      focusedText = undefined;
-    }
+    clearSelection(layer);
     state.texts = dropFrom(state.texts, textItem);
     layer.remove();
     syncToUrl();
@@ -85,7 +94,7 @@ export function addTextLayer(map: Leaflet.Map, textItem: TextLabel, focus: boole
   });
   // Edit the raw markdown source on focus; show the rendered result on blur.
   editable.addEventListener("focus", () => {
-    focusedText = { item: textItem, element: editable };
+    select(buildSelection());
     editable.textContent = textItem.text;
   });
   editable.addEventListener("input", () => {
@@ -93,9 +102,7 @@ export function addTextLayer(map: Leaflet.Map, textItem: TextLabel, focus: boole
     syncToUrl();
   });
   editable.addEventListener("blur", () => {
-    if (focusedText?.element === editable) {
-      focusedText = undefined;
-    }
+    clearSelection(layer);
     editable.innerHTML = renderMarkdown(textItem.text);
     commitText(textItem, layer);
   });

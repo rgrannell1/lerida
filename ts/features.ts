@@ -24,6 +24,7 @@ export const FEATURES: Feature[] = [
   { id: "museum", name: "Museum", icon: "university", common: true },
   { id: "park", name: "Park", icon: "tree", common: true },
   { id: "bar", name: "Bar", icon: "glass" },
+  { id: "fashion", name: "Fashion", icon: "shopping-bag" },
   { id: "gallery", name: "Gallery", icon: "paint-brush" },
   { id: "theatre", name: "Theatre", icon: "film" },
   { id: "beach", name: "Beach", icon: "umbrella" },
@@ -36,7 +37,6 @@ export const FEATURES: Feature[] = [
   { id: "airport", name: "Airport", icon: "plane" },
   { id: "train", name: "Train Station", icon: "train" },
   { id: "bus", name: "Bus Stop", icon: "bus" },
-  { id: "parking", name: "Parking", icon: "car" },
   { id: "info", name: "Info", icon: "info" },
 ];
 
@@ -59,6 +59,22 @@ export const TEXT_SIZES: TextSize[] = [
 
 // Size id used when a text label declares none.
 export const DEFAULT_SIZE = "normal";
+
+// One line-thickness choice: its label and the stroke weight (px) it applies.
+export interface LineWidth {
+  name: string;
+  px: number;
+}
+
+// Stroke widths offered in the line-tool palette, thin → thick.
+export const LINE_WIDTHS: LineWidth[] = [
+  { name: "Thin", px: 2 },
+  { name: "Medium", px: 4 },
+  { name: "Thick", px: 8 },
+];
+
+// Stroke weight (px) used when a line declares none.
+export const DEFAULT_LINE_WIDTH = 4;
 
 // Font size (px) for a text-size id, falling back to the normal size.
 export function fontSizeFor(sizeId: string): number {
@@ -102,4 +118,17 @@ export const DEFAULT_COLOR = "blue";
 export function colorHex(name: string): string {
   const swatch = MARKER_COLORS.find((each) => each.name === name);
   return swatch ? swatch.hex : name;
+}
+
+// Reverse of colorHex for the colour palette's highlight: given a feature's
+// stored colour (a palette name for markers, a hex for lines/polygons/text),
+// return the matching swatch name, or undefined if it isn't a palette colour.
+export function swatchName(color: string | undefined): string | undefined {
+  if (!color) {
+    return undefined;
+  }
+  const match = MARKER_COLORS.find((each) =>
+    each.name === color || each.hex.toLowerCase() === color.toLowerCase()
+  );
+  return match?.name;
 }

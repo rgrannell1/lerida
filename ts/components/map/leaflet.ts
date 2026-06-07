@@ -28,6 +28,7 @@ export const awesomeMarkers =
 interface GeomanPathStyle {
   color: string;
   fillColor?: string;
+  weight?: number;
 }
 
 export interface GeomanDrawOptions {

@@ -6,6 +6,7 @@
 
 import { serveDir } from "@std/http/file-server";
 import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
+import LZString from "lz-string";
 
 // Absolute path to the repo's `web/` directory (served as the document root).
 const WEB_ROOT = new URL("../../web", import.meta.url).pathname;
@@ -121,8 +122,32 @@ export async function openApp(harness: Harness, query = ""): Promise<void> {
   });
 }
 
-// The decoded `?…` query of the page's current URL (without the leading "?").
+// The canonical params of the page's current URL. The app always compresses
+// state into a single `c=` value, so decompress that back to the readable param
+// string; a legacy (uncompressed) query is returned as-is. Either way the result
+// is URL-decoded, so tests can assert on substrings like `markers.0.lat=`.
 export function currentQuery(page: Page): string {
-  const search = new URL(page.url()).search;
-  return decodeURIComponent(search.replace(/^\?/, ""));
+  const search = new URL(page.url()).search.replace(/^\?/, "");
+  const compressed = new URLSearchParams(search).get("c");
+  const params = compressed !== null
+    ? (LZString.decompressFromEncodedURIComponent(compressed) ?? "")
+    : search;
+  return decodeURIComponent(params);
+}
+
+// Poll the decoded params until `predicate` holds (replaces in-browser
+// `location.search.includes(...)` waits, which can't see the compressed state).
+export async function waitForParams(
+  harness: Harness,
+  predicate: (params: string) => boolean,
+  timeoutMs = 15_000,
+): Promise<void> {
+  const start = Date.now();
+  while (Date.now() - start < timeoutMs) {
+    if (predicate(currentQuery(harness.page))) {
+      return;
+    }
+    await harness.page.waitForTimeout(50);
+  }
+  throw new Error("timed out waiting for URL params to match");
 }

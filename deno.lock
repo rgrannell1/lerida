@@ -30,6 +30,7 @@
     "npm:leaflet-polylinedecorator@^1.6.0": "1.6.0",
     "npm:leaflet.awesome-markers@^2.0.5": "2.0.5",
     "npm:leaflet@^1.9.4": "1.9.4",
+    "npm:lz-string@^1.5.0": "1.5.0",
     "npm:marked@^12.0.2": "12.0.2",
     "npm:mithril@^2.2.2": "2.3.8",
     "npm:playwright@^1.49.0": "1.60.0"
@@ -494,6 +495,10 @@
     "lodash@4.18.1": {
       "integrity": "sha512-dMInicTPVE8d1e5otfwmmjlxkZoUpiVLwyeTdUsi/Caj/gfzzblBcCE5sRHV/AsjuCmxWrte2TNGSYuCeCq+0Q=="
     },
+    "lz-string@1.5.0": {
+      "integrity": "sha512-h5bgJWpxJNswbU7qCrV0tIKQCaS3blPDrqKWx+QxzuzL1zGUzij9XCWLrSLsJPu5t+eWA/ycetzYAO5IOMcWAQ==",
+      "bin": true
+    },
     "marked@12.0.2": {
       "integrity": "sha512-qXUm7e/YKFoqFPYPa3Ukg9xlI5cyAtGmyEIzMfW//m6kXwCy2Ps9DYf5ioijFKQ8qyuscrHoY04iJGctu2Kg0Q==",
       "bin": true
@@ -581,6 +586,7 @@
       "npm:leaflet-polylinedecorator@^1.6.0",
       "npm:leaflet.awesome-markers@^2.0.5",
       "npm:leaflet@^1.9.4",
+      "npm:lz-string@^1.5.0",
       "npm:marked@^12.0.2",
       "npm:mithril@^2.2.2",
       "npm:playwright@^1.49.0"
