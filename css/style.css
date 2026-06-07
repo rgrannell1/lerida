@@ -34,6 +34,7 @@ body {
   background: rgba(255, 255, 255, 0.96);
   border-radius: 10px;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 /* Minimised toolbar — just the restore button. */
@@ -49,11 +50,14 @@ body {
 }
 
 .toolbar-title {
-  font-weight: 700;
-  font-size: 18px;
-  letter-spacing: 0.02em;
-  color: #2b6cb0;
-  padding-left: 4px;
+  font-weight: 600;
+  font-size: 16px;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  color: #2c7da0;
+  padding: 0 6px;
+  align-self: center;
+  user-select: none;
 }
 
 .toolbar-actions {
