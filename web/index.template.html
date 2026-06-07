@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>lerida</title>
+  <meta name="theme-color" content="#38aadd" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="{{CSS}}" />
+</head>
+<body>
+  <div id="app"></div>
+  <script type="module" src="{{JS}}"></script>
+  <script>
+    if ("serviceWorker" in navigator) {
+      globalThis.addEventListener("load", () => navigator.serviceWorker.register("/sw.js"));
+    }
+  </script>
+</body>
+</html>

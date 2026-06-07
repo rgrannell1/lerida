@@ -1,117 +1,13 @@
 // The single canonical cycle schema for lerida map state, plus the codec built
-// from it. Every lerida URL conforms to this schema; cycle handles the
-// URL↔state bijection against it.
+// from it. The schema document lives in data/schema.json; this module loads it
+// and compiles the codec. Every lerida URL conforms to this schema; cycle handles
+// the URL↔state bijection against it.
 
 import { createCodec, type JsonSchema } from "cycle";
+import schemaJson from "../data/schema.json" with { type: "json" };
 
-// JSON Schema dialect cycle expects.
-const DIALECT = "https://json-schema.org/draft/2023-02/schema";
-
-// Map state vocabulary: an optional viewport and optional markers. All leaves
-// are concrete (numbers / integer), as cycle requires.
-export const MAP_SCHEMA: JsonSchema = {
-  $schema: DIALECT,
-  type: "object",
-  additionalProperties: false,
-  properties: {
-    view: { $ref: "#/$defs/View", description: "Map viewport." },
-    markers: {
-      type: "array",
-      description: "Point markers.",
-      items: { $ref: "#/$defs/Marker", description: "One marker." },
-    },
-    lines: {
-      type: "array",
-      description: "Polylines.",
-      items: { $ref: "#/$defs/Line", description: "One line." },
-    },
-    polygons: {
-      type: "array",
-      description: "Polygon regions.",
-      items: { $ref: "#/$defs/Polygon", description: "One polygon." },
-    },
-    texts: {
-      type: "array",
-      description: "Free text labels.",
-      items: { $ref: "#/$defs/Text", description: "One text label." },
-    },
-    collapsed: { type: "boolean", description: "Whether the toolbar is minimised." },
-    editable: { type: "boolean", description: "Whether the map can be edited (default true)." },
-  },
-  $defs: {
-    View: {
-      type: "object",
-      additionalProperties: false,
-      description: "Map centre and zoom.",
-      properties: {
-        center: { $ref: "#/$defs/LatLng", description: "Map centre." },
-        zoom: { type: "integer", description: "Zoom level." },
-      },
-    },
-    LatLng: {
-      type: "object",
-      additionalProperties: false,
-      description: "A geographic coordinate.",
-      properties: {
-        lat: { type: "number", description: "Latitude." },
-        lng: { type: "number", description: "Longitude." },
-      },
-    },
-    Marker: {
-      type: "object",
-      additionalProperties: false,
-      description: "A point marker with optional place-feature, colour and label.",
-      properties: {
-        lat: { type: "number", description: "Latitude." },
-        lng: { type: "number", description: "Longitude." },
-        feature: { type: "string", description: "POI category id (rendered as a glyph pin)." },
-        color: { type: "string", description: "Pin colour (CSS)." },
-        label: { type: "string", description: "Text label shown as a tooltip." },
-      },
-    },
-    Line: {
-      type: "object",
-      additionalProperties: false,
-      description: "A polyline with optional colour and label.",
-      properties: {
-        points: {
-          type: "array",
-          description: "Ordered vertices.",
-          items: { $ref: "#/$defs/LatLng", description: "One vertex." },
-        },
-        color: { type: "string", description: "Stroke colour (CSS)." },
-        label: { type: "string", description: "Text label shown as a tooltip." },
-        arrows: { type: "boolean", description: "Show directional arrows along the line." },
-      },
-    },
-    Polygon: {
-      type: "object",
-      additionalProperties: false,
-      description: "A polygon region with optional colour and label.",
-      properties: {
-        points: {
-          type: "array",
-          description: "Boundary vertices.",
-          items: { $ref: "#/$defs/LatLng", description: "One vertex." },
-        },
-        color: { type: "string", description: "Stroke / fill colour (CSS)." },
-        label: { type: "string", description: "Text label shown as a tooltip." },
-      },
-    },
-    Text: {
-      type: "object",
-      additionalProperties: false,
-      description: "A free text label placed on the map.",
-      properties: {
-        lat: { type: "number", description: "Latitude." },
-        lng: { type: "number", description: "Longitude." },
-        text: { type: "string", description: "The label text." },
-        color: { type: "string", description: "Text colour (CSS)." },
-        size: { type: "string", description: "Text size id (normal | large | xlarge)." },
-      },
-    },
-  },
-};
+// The map-state schema, loaded from data/schema.json.
+export const MAP_SCHEMA = schemaJson as unknown as JsonSchema;
 
 // The codec instance — compiled once, shared across the app.
 export const codec = createCodec(MAP_SCHEMA);

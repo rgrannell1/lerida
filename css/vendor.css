@@ -1,0 +1,8 @@
+/* Bundled stylesheet entry: vendor CSS (fonts/images inlined/emitted by esbuild)
+   + app styles. Built separately from the JS so the type-checker never sees CSS
+   imports. Package paths resolve from node_modules. */
+@import "leaflet/dist/leaflet.css";
+@import "leaflet.awesome-markers/dist/leaflet.awesome-markers.css";
+@import "@geoman-io/leaflet-geoman-free/dist/leaflet-geoman.css";
+@import "font-awesome/css/font-awesome.css";
+@import "./style.css";
