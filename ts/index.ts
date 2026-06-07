@@ -5,9 +5,11 @@ import "./leaflet-setup.ts";
 // @deno-types="npm:@types/mithril@^2.2.7"
 import m from "mithril";
 import { App } from "./components/app.ts";
-import { loadFromUrl } from "./state.ts";
+import { loadFromUrl, state } from "./state.ts";
 
 loadFromUrl();
+// Apply the meta page title from the URL (an empty title falls back too).
+document.title = state.meta?.title || "lerida";
 
 const root = document.getElementById("app");
 if (root) {

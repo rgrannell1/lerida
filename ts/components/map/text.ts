@@ -9,8 +9,26 @@ import { state, syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
 import { colorHex, DEFAULT_COLOR, DEFAULT_SIZE, fontSizeFor } from "../../features.ts";
 import type { TextLabel } from "../../types.ts";
-import { dropFrom } from "./editor.ts";
+import { dropFrom, eraserActive } from "./editor.ts";
 import { featureTarget, isEditable } from "./context.ts";
+
+// The text label currently being edited, so the size palette can resize it.
+let focusedText: { item: TextLabel; element: HTMLElement } | undefined;
+
+// Apply a size to the text label currently being edited (if any). Called by the
+// toolbar's size palette.
+export function resizeFocusedText(sizeId: string): void {
+  if (!focusedText) {
+    return;
+  }
+  focusedText.item.size = sizeId;
+  focusedText.element.style.fontSize = `${fontSizeFor(sizeId)}px`;
+  // A not-yet-typed label isn't committed to the URL until it has text — don't
+  // let a resize write an empty label (blur discards it).
+  if (focusedText.item.text.trim().length > 0) {
+    syncToUrl();
+  }
+}
 
 // Commit a text label on blur: drop it if it ended up empty, then write the URL.
 function commitText(textItem: TextLabel, layer: Leaflet.Marker): void {
@@ -48,8 +66,26 @@ export function addTextLayer(map: Leaflet.Map, textItem: TextLabel, focus: boole
     return;
   }
   editable.contentEditable = "true";
+  editable.spellcheck = false;
+  // Remove this label from state and the map.
+  const removeTextItem = () => {
+    if (focusedText?.item === textItem) {
+      focusedText = undefined;
+    }
+    state.texts = dropFrom(state.texts, textItem);
+    layer.remove();
+    syncToUrl();
+  };
+  // The eraser tool removes a label on press (before it can focus for editing).
+  editable.addEventListener("pointerdown", (event) => {
+    if (eraserActive()) {
+      event.preventDefault();
+      removeTextItem();
+    }
+  });
   // Edit the raw markdown source on focus; show the rendered result on blur.
   editable.addEventListener("focus", () => {
+    focusedText = { item: textItem, element: editable };
     editable.textContent = textItem.text;
   });
   editable.addEventListener("input", () => {
@@ -57,6 +93,9 @@ export function addTextLayer(map: Leaflet.Map, textItem: TextLabel, focus: boole
     syncToUrl();
   });
   editable.addEventListener("blur", () => {
+    if (focusedText?.element === editable) {
+      focusedText = undefined;
+    }
     editable.innerHTML = renderMarkdown(textItem.text);
     commitText(textItem, layer);
   });
@@ -68,9 +107,7 @@ export function addTextLayer(map: Leaflet.Map, textItem: TextLabel, focus: boole
   });
   wrapper.addEventListener("contextmenu", (event) => {
     event.preventDefault();
-    state.texts = dropFrom(state.texts, textItem);
-    layer.remove();
-    syncToUrl();
+    removeTextItem();
   });
   if (focus) {
     editable.focus();

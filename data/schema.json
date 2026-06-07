@@ -25,9 +25,18 @@
       "items": { "$ref": "#/$defs/Text", "description": "One text label." }
     },
     "collapsed": { "type": "boolean", "description": "Whether the toolbar is minimised." },
-    "editable": { "type": "boolean", "description": "Whether the map can be edited (default true)." }
+    "editable": { "type": "boolean", "description": "Whether the map can be edited (default true)." },
+    "meta": { "$ref": "#/$defs/Meta", "description": "App-level settings." }
   },
   "$defs": {
+    "Meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "App-level meta settings.",
+      "properties": {
+        "title": { "type": "string", "description": "Browser page title." }
+      }
+    },
     "View": {
       "type": "object",
       "additionalProperties": false,

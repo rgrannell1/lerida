@@ -3,26 +3,29 @@
 // swatches. The URL stores the category id (e.g. `cafe`); the glyph is looked up.
 
 // A selectable POI category: a semantic id, a display name, and its FA4 glyph.
+// `common` categories show in the palette by default; the rest live behind a
+// "more" (…) toggle.
 export interface Feature {
   id: string;
   name: string;
   icon: string;
+  common?: boolean;
 }
 
 // Curated POI categories. The URL accepts any category id; the picker shows this
 // set. `place` is the neutral default.
 export const FEATURES: Feature[] = [
-  { id: "place", name: "Place", icon: "map-marker" },
-  { id: "favourite", name: "Favourite", icon: "star" },
-  { id: "cafe", name: "Café", icon: "coffee" },
-  { id: "restaurant", name: "Restaurant", icon: "cutlery" },
+  { id: "place", name: "Place", icon: "map-marker", common: true },
+  { id: "favourite", name: "Favourite", icon: "star", common: true },
+  { id: "cafe", name: "Café", icon: "coffee", common: true },
+  { id: "restaurant", name: "Restaurant", icon: "cutlery", common: true },
+  { id: "hotel", name: "Hotel", icon: "bed", common: true },
+  { id: "shop", name: "Shop", icon: "shopping-cart", common: true },
+  { id: "museum", name: "Museum", icon: "university", common: true },
+  { id: "park", name: "Park", icon: "tree", common: true },
   { id: "bar", name: "Bar", icon: "glass" },
-  { id: "hotel", name: "Hotel", icon: "bed" },
-  { id: "shop", name: "Shop", icon: "shopping-cart" },
-  { id: "museum", name: "Museum", icon: "university" },
   { id: "gallery", name: "Gallery", icon: "paint-brush" },
   { id: "theatre", name: "Theatre", icon: "film" },
-  { id: "park", name: "Park", icon: "tree" },
   { id: "beach", name: "Beach", icon: "umbrella" },
   { id: "viewpoint", name: "Viewpoint", icon: "camera" },
   { id: "hospital", name: "Hospital", icon: "medkit" },

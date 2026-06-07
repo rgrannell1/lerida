@@ -48,9 +48,15 @@ export interface TextLabel {
   size?: string;
 }
 
+// App-level settings carried in the URL (the browser page title, for now).
+export interface Meta {
+  title?: string;
+}
+
 // The whole decoded map state. All fields are optional — an empty URL decodes
 // to {} and the map falls back to its defaults. `collapsed` minimises the
-// toolbar; `editable` (default true) gates all feature editing.
+// toolbar; `editable` (default true) gates all feature editing; `meta` carries
+// app-level settings.
 export interface MapState {
   view?: View;
   markers?: Marker[];
@@ -59,4 +65,5 @@ export interface MapState {
   texts?: TextLabel[];
   collapsed?: boolean;
   editable?: boolean;
+  meta?: Meta;
 }

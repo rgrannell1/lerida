@@ -10,4 +10,6 @@ export const ui = {
   selectedColor: DEFAULT_COLOR,
   selectedSize: DEFAULT_SIZE,
   selectedArrows: false,
+  // Whether the feature palette shows the less-common categories (the "…" toggle).
+  showAllFeatures: false,
 };

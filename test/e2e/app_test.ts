@@ -20,6 +20,13 @@ const TOOLBAR = "[data-role='toolbar']";
 const MAP_POINT = { x: 700, y: 460 };
 const MAP_POINT_B = { x: 520, y: 360 };
 
+// The midpoint of a line drawn between MAP_POINT_B and MAP_POINT — lands on the
+// rendered polyline, so a click there hits the line itself.
+const LINE_MID = {
+  x: (MAP_POINT.x + MAP_POINT_B.x) / 2,
+  y: (MAP_POINT.y + MAP_POINT_B.y) / 2,
+};
+
 // Run `body` against a fresh harness, always tearing it down afterwards.
 async function withApp(body: (harness: Harness) => Promise<void>): Promise<void> {
   const harness = await launch();
@@ -28,6 +35,26 @@ async function withApp(body: (harness: Harness) => Promise<void>): Promise<void>
   } finally {
     await harness.close();
   }
+}
+
+// Click the Leaflet zoom-in control (a Leaflet-owned control, so it has no
+// data-* attribute of ours) and wait for the zoom to be written to the URL.
+async function zoomIn(harness: Harness): Promise<void> {
+  await harness.page.locator(".leaflet-control-zoom-in").click();
+  await harness.page.waitForFunction(() => location.search.includes("view.zoom="));
+}
+
+// Draw a two-vertex line and wait for it to reach the URL. The shape is finished
+// with Escape (one deterministic _finishShape call) rather than a double-click,
+// whose event timing can otherwise leave two overlapping line layers. Escape also
+// returns the tool to marker, so callers can interact with the line immediately.
+async function drawLine(harness: Harness): Promise<void> {
+  await harness.page.locator("[data-tool='line']").click();
+  await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
+  await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+  await harness.page.keyboard.press("Escape");
+  await harness.page.waitForFunction(() => location.search.includes("lines.0.points.0.lat="));
+  await harness.page.waitForSelector("[data-palette='feature']");
 }
 
 Deno.test("app loads and renders the map without console errors", async () => {
@@ -41,8 +68,8 @@ Deno.test("app loads and renders the map without console errors", async () => {
     harness.page.on("pageerror", (error) => errors.push(error.message));
     await openApp(harness);
     await harness.page.waitForSelector(TOOLBAR);
-    // The four drawing tools (marker / line / polygon / text) are present.
-    assertEquals(await harness.page.locator("[data-tool]").count(), 4);
+    // The drawing tools (marker / line / polygon / text / eraser) are present.
+    assertEquals(await harness.page.locator("[data-tool]").count(), 5);
     // Offline tile / favicon fetches 404 — those aside, nothing should error.
     const ignore = /tile|openstreetmap|net::|404|Failed to load/i;
     const real = errors.filter((text) => !ignore.test(text));
@@ -210,5 +237,256 @@ Deno.test("drawing a line writes a polyline into the URL", async () => {
     const query = currentQuery(harness.page);
     assertStringIncludes(query, "lines.0.points.0.lat=");
     assertStringIncludes(query, "lines.0.points.1.lat=");
+  });
+});
+
+Deno.test("zooming writes the view to the URL and a reload restores it", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    assert(!currentQuery(harness.page).includes("view."), "no view in the URL initially");
+    await zoomIn(harness);
+    const zoomed = currentQuery(harness.page);
+    // captureView writes the whole viewport — centre and zoom — on a zoom change.
+    assertStringIncludes(zoomed, "view.zoom=8");
+    assertStringIncludes(zoomed, "view.center.lat=");
+    assertStringIncludes(zoomed, "view.center.lng=");
+    // The viewport is shareable: a reload opens the map at the same zoom.
+    await harness.page.reload();
+    await harness.page.waitForSelector("#map.leaflet-container");
+    assertStringIncludes(currentQuery(harness.page), "view.zoom=8");
+  });
+});
+
+Deno.test("the toolbar's selected category and colour apply to a new marker", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-feature-id='cafe']").click();
+    await harness.page.locator("[data-color='red']").click();
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.waitForSelector(PIN);
+    const query = currentQuery(harness.page);
+    assertStringIncludes(query, "markers.0.feature=cafe");
+    assertStringIncludes(query, "markers.0.color=red");
+  });
+});
+
+Deno.test("drawing a polygon (closing on the first vertex) writes it to the URL", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-tool='polygon']").click();
+    // Click three vertices, then click the first again to close the ring.
+    const first = { x: 500, y: 350 };
+    await harness.page.mouse.click(first.x, first.y);
+    await harness.page.mouse.click(720, 360);
+    await harness.page.mouse.click(620, 520);
+    await harness.page.mouse.click(first.x, first.y);
+    await harness.page.waitForFunction(() => location.search.includes("polygons.0.points.0.lat="));
+    const query = currentQuery(harness.page);
+    assertStringIncludes(query, "polygons.0.points.0.lat=");
+    assertStringIncludes(query, "polygons.0.points.2.lat=");
+  });
+});
+
+Deno.test("toggling directional arrows draws a line with arrows in the URL", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // The arrows toggle only appears once the line tool is active.
+    await harness.page.locator("[data-tool='line']").click();
+    await harness.page.locator("[data-action='arrows']").click();
+    await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.mouse.dblclick(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.waitForFunction(() => location.search.includes("lines.0.arrows=true"));
+    assertStringIncludes(currentQuery(harness.page), "lines.0.arrows=true");
+  });
+});
+
+Deno.test("Escape commits an in-progress line and returns to the marker tool", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-tool='line']").click();
+    // Two vertices placed but not finished — Escape should commit them.
+    await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.keyboard.press("Escape");
+    await harness.page.waitForFunction(() => location.search.includes("lines.0.points.0.lat="));
+    assertStringIncludes(currentQuery(harness.page), "lines.0.points.0.lat=");
+    // The tool falls back to marker — its category palette reappears.
+    await harness.page.waitForSelector("[data-palette='feature']");
+  });
+});
+
+Deno.test("clicking a vector feature edits it without dropping a marker on top", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await drawLine(harness);
+    // drawLine leaves the marker tool active; clicking the line must edit it…
+    await harness.page.mouse.click(LINE_MID.x, LINE_MID.y);
+    // The line's editor opens…
+    await harness.page.waitForSelector("[data-role='label-input']");
+    // …and no stray marker was placed by the propagated map click.
+    assertEquals(await harness.page.locator(PIN).count(), 0);
+    assert(!currentQuery(harness.page).includes("markers."), "no marker should be added");
+  });
+});
+
+Deno.test("a line can be labelled via the shared editor", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await drawLine(harness);
+    await harness.page.mouse.click(LINE_MID.x, LINE_MID.y);
+    const input = harness.page.locator("[data-role='label-input']");
+    await input.waitFor();
+    await input.fill("Route");
+    await input.press("Enter");
+    await harness.page.waitForFunction(() => location.search.includes("lines.0.label=Route"));
+    assertStringIncludes(currentQuery(harness.page), "lines.0.label=Route");
+  });
+});
+
+Deno.test("right-clicking a line removes it from the URL", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await drawLine(harness);
+    await harness.page.mouse.click(LINE_MID.x, LINE_MID.y, { button: "right" });
+    await harness.page.waitForFunction(() => !location.search.includes("lines."));
+    assert(!currentQuery(harness.page).includes("lines."), "line should be gone from the URL");
+  });
+});
+
+Deno.test("a text label rendered with no text is discarded on blur", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-tool='text']").click();
+    await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
+    const editable = harness.page.locator(TEXT_INPUT).first();
+    await editable.waitFor();
+    // Commit immediately without typing — the empty label should not persist.
+    await editable.press("Enter");
+    await harness.page.waitForSelector(TEXT_INPUT, { state: "detached" });
+    assert(!currentQuery(harness.page).includes("texts."), "empty text must be discarded");
+  });
+});
+
+Deno.test("label markdown renders inline and is sanitised", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-tool='text']").click();
+    await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
+    const editable = harness.page.locator(TEXT_INPUT).first();
+    await editable.waitFor();
+    await editable.type(
+      "**bold** [j](javascript:alert(1)) [s](https://example.com) <img src=x onerror=alert(1)>",
+    );
+    await editable.press("Enter");
+    const html = await editable.evaluate((node) => node.innerHTML);
+    // Bold renders; the javascript: link is stripped; the real link opens safely in
+    // a new tab; the image (an XSS vector) is dropped entirely.
+    assertStringIncludes(html, "<strong>bold</strong>");
+    assert(!html.includes("javascript:"), `javascript: URL should be stripped: ${html}`);
+    assertStringIncludes(html, 'href="https://example.com"');
+    assertStringIncludes(html, 'rel="noopener noreferrer"');
+    assertStringIncludes(html, 'target="_blank"');
+    assert(!html.includes("<img"), `images must be stripped: ${html}`);
+  });
+});
+
+Deno.test("a locked map still pans/zooms and keeps the editable flag", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness, "?editable=false");
+    await zoomIn(harness);
+    const query = currentQuery(harness.page);
+    assertStringIncludes(query, "view.zoom=8");
+    // The lock survives the viewport change so the URL stays read-only.
+    assertStringIncludes(query, "editable=false");
+  });
+});
+
+Deno.test("a locked map renders labels read-only with clickable links", async () => {
+  await withApp(async (harness) => {
+    const text = encodeURIComponent("[site](https://example.com)");
+    await openApp(
+      harness,
+      `?texts.0.lat=53.3&texts.0.lng=-6.2&texts.0.text=${text}&editable=false`,
+    );
+    const editable = harness.page.locator(TEXT_INPUT).first();
+    await editable.waitFor();
+    // The label is not editable, but its sanitised link is present and clickable.
+    assertEquals(await editable.evaluate((node) => (node as HTMLElement).isContentEditable), false);
+    const href = await editable.locator("a").getAttribute("href");
+    assertEquals(href, "https://example.com");
+  });
+});
+
+Deno.test("the restore button re-expands a collapsed toolbar", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness, "?collapsed=true");
+    await harness.page.waitForSelector("[data-action='restore']");
+    assertEquals(await harness.page.locator("[data-palette='tool']").count(), 0);
+    await harness.page.locator("[data-action='restore']").click();
+    // Expanded again: the tool palette returns and the URL drops the flag.
+    await harness.page.waitForSelector("[data-palette='tool']");
+    await harness.page.waitForFunction(() => !location.search.includes("collapsed"));
+    assert(!currentQuery(harness.page).includes("collapsed"), "collapsed flag should be cleared");
+  });
+});
+
+Deno.test("the eraser tool removes a feature on click", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // Place a marker, then switch to the eraser and click it away.
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.waitForFunction(() => location.search.includes("markers.0."));
+    await harness.page.locator("[data-tool='eraser']").click();
+    await harness.page.locator(PIN).click();
+    await harness.page.waitForFunction(() => !location.search.includes("markers.0."));
+    assert(!currentQuery(harness.page).includes("markers"), "the marker should be erased");
+  });
+});
+
+Deno.test("the … toggle reveals the less-common categories", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // A common category shows by default; an uncommon one is hidden until expanded.
+    await harness.page.waitForSelector("[data-feature-id='cafe']");
+    assertEquals(await harness.page.locator("[data-feature-id='airport']").count(), 0);
+    await harness.page.locator("[data-action='more-features']").click();
+    await harness.page.waitForSelector("[data-feature-id='airport']");
+    assertEquals(await harness.page.locator("[data-feature-id='airport']").count(), 1);
+  });
+});
+
+Deno.test("the meta.title setting sets the page title", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness, "?meta.title=My%20Trip");
+    assertEquals(await harness.page.title(), "My Trip");
+  });
+});
+
+Deno.test("the size palette resizes the focused text label", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-tool='text']").click();
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    const editable = harness.page.locator(TEXT_INPUT).first();
+    await editable.waitFor();
+    await editable.type("hi");
+    // The label is still focused; picking a size resizes it in place.
+    await harness.page.locator("[data-size='xlarge']").click();
+    await harness.page.waitForFunction(() => location.search.includes("texts.0.size=xlarge"));
+    assertStringIncludes(currentQuery(harness.page), "texts.0.size=xlarge");
+  });
+});
+
+Deno.test("resizing a not-yet-typed label does not write an empty label to the URL", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-tool='text']").click();
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.locator(TEXT_INPUT).first().waitFor();
+    // Pick a size before typing anything — the empty label must not reach the URL.
+    await harness.page.locator("[data-size='large']").click();
+    await harness.page.waitForTimeout(150);
+    assert(!currentQuery(harness.page).includes("texts."), "empty label must not be encoded");
   });
 });

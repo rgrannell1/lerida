@@ -16,6 +16,7 @@ import {
 import { ui } from "../ui.ts";
 import { state, syncToUrl } from "../state.ts";
 import { applyTool, clearFeatures } from "./map.ts";
+import { resizeFocusedText } from "./map/text.ts";
 
 // One drawing tool: its id, the glyph shown, and a hover/title label.
 interface Tool {
@@ -29,6 +30,7 @@ const TOOLS: Tool[] = [
   { id: "line", glyph: "minus", title: "Line" },
   { id: "polygon", glyph: "square-o", title: "Polygon" },
   { id: "text", glyph: "font", title: "Text" },
+  { id: "eraser", glyph: "eraser", title: "Eraser" },
 ];
 
 function selectTool(id: string): void {
@@ -46,10 +48,16 @@ function selectColor(name: string): void {
 
 function selectSize(id: string): void {
   ui.selectedSize = id;
+  // Also resize the text label currently being edited, if any.
+  resizeFocusedText(id);
 }
 
 function toggleArrows(): void {
   ui.selectedArrows = !ui.selectedArrows;
+}
+
+function toggleShowAllFeatures(): void {
+  ui.showAllFeatures = !ui.showAllFeatures;
 }
 
 // Render a Font Awesome glyph button (tool buttons), highlighted when active.
@@ -80,6 +88,13 @@ function featureButton(feature: Feature): m.Vnode {
   });
 }
 
+// The "…" toggle that reveals / hides the less-common categories.
+function moreFeaturesButton(): m.Vnode {
+  return glyphButton("ellipsis-h", "More categories", ui.showAllFeatures, toggleShowAllFeatures, {
+    "data-action": "more-features",
+  });
+}
+
 // A text-size button showing a scaled "A", highlighted when selected.
 function sizeButton(size: TextSize): m.Vnode {
   const active = ui.selectedSize === size.id;
@@ -87,6 +102,8 @@ function sizeButton(size: TextSize): m.Vnode {
   const letter = m("span", { style: `font-size:${Math.min(size.px, 22)}px` }, "A");
   return m(selector, {
     title: size.name,
+    // Keep the focused text label focused so the click can resize it.
+    onmousedown: (event: MouseEvent) => event.preventDefault(),
     onclick: () => selectSize(size.id),
     "data-size": size.id,
   }, letter);
@@ -138,11 +155,13 @@ export function Toolbar(): m.Component {
         m("div.palette.tool-palette", { "data-palette": "tool" }, TOOLS.map(toolButton)),
       ];
       // The category palette only applies to markers; the size palette to text.
+      // Less-common categories hide behind a "…" toggle.
       if (ui.tool === "marker") {
+        const shown = FEATURES.filter((feature) => feature.common || ui.showAllFeatures);
         rows.push(
           m("div.palette.feature-palette", {
             "data-palette": "feature",
-          }, FEATURES.map(featureButton)),
+          }, [...shown.map(featureButton), moreFeaturesButton()]),
         );
       }
       if (ui.tool === "text") {
@@ -161,9 +180,14 @@ export function Toolbar(): m.Component {
         );
         rows.push(m("div.palette.arrows-palette", { "data-palette": "arrows" }, arrowsBtn));
       }
-      rows.push(
-        m("div.palette.color-palette", { "data-palette": "color" }, MARKER_COLORS.map(colorButton)),
-      );
+      // Colour applies to every tool that creates a feature — but not the eraser.
+      if (ui.tool !== "eraser") {
+        rows.push(
+          m("div.palette.color-palette", {
+            "data-palette": "color",
+          }, MARKER_COLORS.map(colorButton)),
+        );
+      }
       return m("div#toolbar", { "data-role": "toolbar" }, rows);
     },
   };

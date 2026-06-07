@@ -63,6 +63,11 @@ const CASES: Case[] = [
     params: "collapsed=true",
   },
   {
+    name: "meta page title",
+    state: { meta: { title: "Trip" } },
+    params: "meta.title=Trip",
+  },
+  {
     name: "non-editable (locked) flag",
     state: { editable: false },
     params: "editable=false",

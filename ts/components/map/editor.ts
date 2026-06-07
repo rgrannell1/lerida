@@ -4,8 +4,16 @@
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
 import { syncToUrl } from "../../state.ts";
+import { ui } from "../../ui.ts";
 import { renderMarkdown } from "../../markdown.ts";
 import { isEditable, mapContext } from "./context.ts";
+
+// True when the eraser tool is active: clicking any feature removes it instead
+// of editing it. The single source of the eraser rule, shared by every feature
+// type's interaction handler.
+export function eraserActive(): boolean {
+  return ui.tool === "eraser";
+}
 
 // Any feature carrying a text label.
 export interface Labelled {
@@ -39,6 +47,7 @@ export function openEditor(target: Labelled, layer: Leaflet.Layer, remove: () =>
   input.type = "text";
   input.className = "marker-label-input";
   input.dataset.role = "label-input";
+  input.spellcheck = false;
   input.placeholder = "Label";
   input.value = target.label ?? "";
   input.addEventListener("input", () => setLabel(target, layer, input.value));
@@ -100,6 +109,11 @@ export function wireFeature(
   applyTooltip(layer, target);
   layer.on("click", (event) => {
     if (!isEditable()) {
+      return;
+    }
+    // The eraser tool removes the feature instead of opening its editor.
+    if (eraserActive()) {
+      remove();
       return;
     }
     if (consumesClick) {

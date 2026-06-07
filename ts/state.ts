@@ -19,6 +19,7 @@ export function loadFromUrl(): void {
   state.texts = decoded.texts ?? [];
   state.collapsed = decoded.collapsed ?? false;
   state.editable = decoded.editable ?? true;
+  state.meta = decoded.meta;
 }
 
 // Build a clean snapshot for encoding — omit empty fields so the URL stays
@@ -46,6 +47,9 @@ function snapshot(): StateObject {
   // Default is editable; only encode the flag when the map is locked.
   if (state.editable === false) {
     out.editable = false;
+  }
+  if (state.meta && state.meta.title) {
+    out.meta = state.meta;
   }
   return out as unknown as StateObject;
 }
