@@ -5,6 +5,7 @@
 import m from "mithril";
 import { MapView } from "./map.ts";
 import { Toolbar } from "./toolbar.ts";
+import { Search } from "./search.ts";
 import { About } from "./about.ts";
 import { ui } from "../ui.ts";
 
@@ -20,7 +21,7 @@ function drawHint(): m.Vnode | null {
 export function App(): m.Component {
   return {
     view() {
-      return [m(MapView), m(Toolbar), drawHint(), ui.showAbout ? m(About) : null];
+      return [m(MapView), m(Toolbar), m(Search), drawHint(), ui.showAbout ? m(About) : null];
     },
   };
 }

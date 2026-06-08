@@ -641,3 +641,67 @@ Deno.test("editing a placed line changes its width via the toolbar", async () =>
     assertStringIncludes(currentQuery(harness.page), "lines.0.width=8");
   });
 });
+
+Deno.test("the search box filters markers by label and jumps to a pick", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // Place a marker and label it "Home".
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    const pin = harness.page.locator(PIN).first();
+    await pin.waitFor();
+    await pin.click();
+    const labelInput = harness.page.locator("[data-role='label-input']");
+    await labelInput.waitFor();
+    await labelInput.fill("Home");
+    await labelInput.press("Enter");
+    await waitForParams(harness, (query) => query.includes("markers.0.label=Home"));
+    // Searching its label surfaces exactly one result naming it.
+    const search = harness.page.locator("[data-role='search-input']");
+    await search.fill("home");
+    const result = harness.page.locator("[data-search-result]");
+    await result.first().waitFor();
+    assertEquals(await result.count(), 1);
+    assertStringIncludes((await result.first().textContent()) ?? "", "Home");
+    // Picking it clears the box (and pans the map via setView).
+    await result.first().click();
+    await harness.page.waitForFunction(() => {
+      const box = document.querySelector("[data-role='search-input']") as HTMLInputElement | null;
+      return !!box && box.value === "";
+    });
+    // A query that matches nothing shows no results dropdown.
+    await search.fill("nowhere-xyz");
+    assertEquals(await harness.page.locator("[data-role='search-results']").count(), 0);
+  });
+});
+
+Deno.test("the search box shows on a locked map (navigation, not editing)", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness, "?editable=false");
+    assertEquals(await harness.page.locator(TOOLBAR).count(), 0);
+    assertEquals(await harness.page.locator("[data-role='search']").count(), 1);
+  });
+});
+
+Deno.test("search supports category:* syntax and the × button clears it", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // A café marker, then a default "place" marker elsewhere.
+    await harness.page.locator("[data-feature-id='cafe']").click();
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    await harness.page.waitForSelector(PIN);
+    await waitForParams(harness, (query) => query.includes("markers.0.feature=cafe"));
+    await harness.page.locator("[data-feature-id='place']").click();
+    await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
+    await waitForParams(harness, (query) => query.includes("markers.1."));
+    // "cafe:*" matches every café and nothing else.
+    const search = harness.page.locator("[data-role='search-input']");
+    await search.fill("cafe:*");
+    const results = harness.page.locator("[data-search-result]");
+    await results.first().waitFor();
+    assertEquals(await results.count(), 1);
+    // The × button clears the query and closes the dropdown.
+    await harness.page.locator("[data-action='search-clear']").click();
+    assertEquals(await search.inputValue(), "");
+    assertEquals(await harness.page.locator("[data-role='search-results']").count(), 0);
+  });
+});

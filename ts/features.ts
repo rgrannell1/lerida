@@ -90,6 +90,15 @@ export function iconFor(featureId: string): string {
   return ICON_BY_FEATURE[featureId] ?? "map-marker";
 }
 
+// Display name for a feature id, falling back to the raw id.
+const NAME_BY_FEATURE: Record<string, string> = Object.fromEntries(
+  FEATURES.map((feature) => [feature.id, feature.name]),
+);
+
+export function nameFor(featureId: string): string {
+  return NAME_BY_FEATURE[featureId] ?? featureId;
+}
+
 // A selectable pin colour: an AwesomeMarkers palette name plus the hex used for
 // line / polygon paths.
 export interface ColorSwatch {

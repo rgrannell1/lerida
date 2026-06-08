@@ -18,4 +18,6 @@ export const ui = {
   showAllTools: false,
   // Whether the "about" overlay (opened from the brand title) is showing.
   showAbout: false,
+  // The current query in the floating marker-search box (not URL-encoded).
+  searchQuery: "",
 };
