@@ -84,6 +84,10 @@ function onMapClick(map: Leaflet.Map, event: Leaflet.LeafletEvent): void {
   if (!isEditable()) {
     return;
   }
+  // The options panel owns the toolbar; don't place features behind it.
+  if (ui.showOptions) {
+    return;
+  }
   const point = (event as Leaflet.LeafletMouseEvent).latlng;
   if (ui.tool === "marker") {
     placeMarker(map, point);

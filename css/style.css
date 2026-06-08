@@ -147,7 +147,8 @@ body {
   cursor: pointer;
 }
 
-.search-result:hover {
+.search-result:hover,
+.search-result.active {
   background: #e3f0f5;
 }
 
@@ -255,6 +256,44 @@ body {
   flex-wrap: wrap;
   gap: 4px;
   justify-content: center;
+}
+
+/* Options panel: map-level meta settings, shown in place of the tool palettes. */
+.options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 2px;
+}
+
+.options-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.options-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #718096;
+}
+
+.options-input {
+  box-sizing: border-box;
+  width: 220px;
+  max-width: 100%;
+  /* 16px font avoids iOS focus-zoom. */
+  padding: 6px 8px;
+  font-size: 16px;
+  color: #333;
+  border: 1px solid #cbd5e0;
+  border-radius: 6px;
+}
+
+.options-input:focus {
+  outline: 2px solid #2c7da0;
 }
 
 /* Shown in place of the tool palette while a feature is being edited: names the

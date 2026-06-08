@@ -18,8 +18,9 @@ import {
 import { ui } from "../ui.ts";
 import { state, syncToUrl } from "../state.ts";
 import { applyTool, clearFeatures } from "./map.ts";
-import { selection } from "./map/selection.ts";
+import { clearSelection, selection } from "./map/selection.ts";
 import { startToolbarDrag, toolbarStyle } from "./toolbar-drag.ts";
+import { Options } from "./options.ts";
 
 // One drawing tool: its id, the glyph shown, a hover/title label, and whether it
 // is common enough to show before the "…" overflow toggle is expanded.
@@ -100,6 +101,15 @@ function toggleShowAllTools(): void {
 
 function openAbout(): void {
   ui.showAbout = true;
+}
+
+// Toggle the options panel (page title + other meta settings). Opening it drops
+// any feature selection so the panel, not a feature, owns the toolbar body.
+function toggleOptions(): void {
+  ui.showOptions = !ui.showOptions;
+  if (ui.showOptions) {
+    clearSelection();
+  }
 }
 
 // Render a Font Awesome glyph button (tool buttons), highlighted when active.
@@ -234,11 +244,20 @@ export function Toolbar(): m.Component {
             "data-action": "about",
           }, "lerida"),
           m("div.toolbar-actions", [
+            glyphButton("cog", "Options", ui.showOptions, toggleOptions, {
+              "data-action": "options",
+            }),
             glyphButton("trash", "Clear all", false, clearFeatures, { "data-action": "clear" }),
             toggleButton("chevron-up", "Minimise", "minimise"),
           ]),
         ]),
       ];
+      // The options panel takes over the toolbar body, replacing the drawing
+      // tools and their palettes with map-level meta settings.
+      if (ui.showOptions) {
+        rows.push(m(Options));
+        return m("div#toolbar", { "data-role": "toolbar", style: toolbarStyle() }, rows);
+      }
       // Editing a feature replaces the tool palette with a cue naming it; the
       // palettes below act on the selection. Closing its editor restores tools.
       if (sel) {

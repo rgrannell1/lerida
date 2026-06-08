@@ -18,6 +18,12 @@ export const ui = {
   showAllTools: false,
   // Whether the "about" overlay (opened from the brand title) is showing.
   showAbout: false,
+  // Whether the toolbar is showing the options panel (page title + other meta
+  // settings) in place of the drawing tools. Ephemeral, not URL-encoded.
+  showOptions: false,
   // The current query in the floating marker-search box (not URL-encoded).
   searchQuery: "",
+  // Index of the keyboard-highlighted search result (-1 = none); arrow keys move
+  // it, Enter jumps to it. Reset whenever the query changes.
+  searchActive: -1,
 };

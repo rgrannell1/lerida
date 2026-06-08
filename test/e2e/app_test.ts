@@ -705,3 +705,59 @@ Deno.test("search supports category:* syntax and the × button clears it", async
     assertEquals(await harness.page.locator("[data-role='search-results']").count(), 0);
   });
 });
+
+Deno.test("arrow keys move the search highlight and Enter jumps to it", async () => {
+  await withApp(async (harness) => {
+    // Seed two markers (labels both fuzzy-match "ca") directly via the URL, so the
+    // test is deterministic and doesn't depend on the slower click-and-label flow.
+    await openApp(
+      harness,
+      "?markers.0.lat=53.35&markers.0.lng=-6.26&markers.0.label=Cafe" +
+        "&markers.1.lat=53.34&markers.1.lng=-6.25&markers.1.label=Camden",
+    );
+    const search = harness.page.locator("[data-role='search-input']");
+    await search.fill("ca");
+    const results = harness.page.locator("[data-search-result]");
+    await results.first().waitFor();
+    assertEquals(await results.count(), 2);
+    // ArrowDown highlights the first result, again the second.
+    await search.press("ArrowDown");
+    assertEquals(await harness.page.locator("[data-search-result].active").count(), 1);
+    assertEquals(
+      await harness.page.locator("[data-search-result='0'].active").count(),
+      1,
+    );
+    await search.press("ArrowDown");
+    assertEquals(
+      await harness.page.locator("[data-search-result='1'].active").count(),
+      1,
+    );
+    // Enter on the highlighted result jumps to it and clears the box.
+    await search.press("Enter");
+    await harness.page.waitForFunction(() => {
+      const box = document.querySelector("[data-role='search-input']") as HTMLInputElement | null;
+      return !!box && box.value === "";
+    });
+  });
+});
+
+Deno.test("the options panel sets the page title into the URL and document", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // The cog opens the options panel in place of the drawing tools.
+    assertEquals(await harness.page.locator("[data-palette='tool']").count(), 1);
+    await harness.page.locator("[data-action='options']").click();
+    await harness.page.waitForSelector("[data-role='options']");
+    assertEquals(await harness.page.locator("[data-palette='tool']").count(), 0);
+    // Typing a title updates the document title and the URL.
+    await harness.page.locator("[data-role='title-input']").fill("Holiday");
+    await waitForParams(harness, (query) => query.includes("meta.title=Holiday"));
+    assertEquals(await harness.page.title(), "Holiday");
+    // While options is open, clicking the map places nothing.
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    assertEquals(await harness.page.locator(PIN).count(), 0);
+    // Closing the panel restores the tool palette.
+    await harness.page.locator("[data-action='options']").click();
+    await harness.page.waitForSelector("[data-palette='tool']");
+  });
+});

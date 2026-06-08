@@ -93,10 +93,13 @@ function jumpTo(marker: Marker): void {
     map.setView([marker.lat, marker.lng], map.getZoom());
   }
   ui.searchQuery = "";
+  ui.searchActive = -1;
 }
 
 function resultRow(marker: Marker, index: number): m.Vnode {
-  return m("button.search-result", {
+  const active = ui.searchActive === index;
+  const selector = active ? "button.search-result.active" : "button.search-result";
+  return m(selector, {
     key: index,
     onclick: () => jumpTo(marker),
     "data-search-result": String(index),
@@ -104,6 +107,28 @@ function resultRow(marker: Marker, index: number): m.Vnode {
     m(`i.fa.fa-${iconFor(marker.feature ?? "")}`),
     m("span", resultLabel(marker)),
   ]);
+}
+
+// Arrow keys move the highlight through the results, Enter jumps to it (or to the
+// first result when none is highlighted), Escape clears the box.
+function onKeyDown(event: KeyboardEvent, results: Marker[]): void {
+  if (event.key === "ArrowDown") {
+    event.preventDefault();
+    ui.searchActive = results.length === 0 ? -1 : (ui.searchActive + 1) % results.length;
+  } else if (event.key === "ArrowUp") {
+    event.preventDefault();
+    ui.searchActive = results.length === 0
+      ? -1
+      : (ui.searchActive <= 0 ? results.length : ui.searchActive) - 1;
+  } else if (event.key === "Enter") {
+    const target = ui.searchActive >= 0 ? results[ui.searchActive] : results[0];
+    if (target) {
+      jumpTo(target);
+    }
+  } else if (event.key === "Escape") {
+    ui.searchQuery = "";
+    ui.searchActive = -1;
+  }
 }
 
 export function Search(): m.Component {
@@ -120,7 +145,10 @@ export function Search(): m.Component {
             value: ui.searchQuery,
             oninput: (event: InputEvent) => {
               ui.searchQuery = (event.target as HTMLInputElement).value;
+              // A changed query reshuffles the results, so drop the highlight.
+              ui.searchActive = -1;
             },
+            onkeydown: (event: KeyboardEvent) => onKeyDown(event, results),
             "data-role": "search-input",
           }),
           hasQuery
@@ -128,6 +156,7 @@ export function Search(): m.Component {
               title: "Clear search",
               onclick: () => {
                 ui.searchQuery = "";
+                ui.searchActive = -1;
               },
               "data-action": "search-clear",
             }, m("i.fa.fa-times"))

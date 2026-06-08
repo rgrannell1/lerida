@@ -2,7 +2,20 @@
 // (a module variable, not URL state), so the box returns to its default
 // top-centre spot on every page load — as requested.
 
+// @deno-types="npm:@types/mithril@^2.2.7"
+import m from "mithril";
+
 let dragged: { left: number; top: number } | undefined;
+
+// A resize can leave a dragged toolbar pinned off-screen (e.g. the window shrank
+// past its corner), making it go missing. Drop the dragged position on resize so
+// it snaps back to the default top-centre, and redraw to re-apply the CSS default.
+globalThis.addEventListener("resize", () => {
+  if (dragged) {
+    dragged = undefined;
+    m.redraw();
+  }
+});
 
 // Inline style for the toolbar root once it has been dragged: pin it to the
 // dragged corner and drop the default centring transform. Undefined before any
