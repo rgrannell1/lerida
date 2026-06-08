@@ -7,6 +7,8 @@ import { ui } from "../ui.ts";
 
 const REPO_URL = "https://github.com/rgrannell1/lerida";
 const OSM_URL = "https://www.openstreetmap.org/copyright";
+// The name nods to Borges' one-paragraph fable of a map as large as its empire.
+const WIKI_URL = "https://en.wikipedia.org/wiki/On_Exactitude_in_Science";
 
 function closeAbout(): void {
   ui.showAbout = false;
@@ -44,17 +46,17 @@ export function About(): m.Component {
             onclick: closeAbout,
             "data-action": "about-close",
           }, m("i.fa.fa-times")),
-          m("h1.about-title", "lerida"),
+          m("h1.about-title", externalLink(WIKI_URL, "lerida")),
           m("p.about-tagline", "Make your own maps."),
           m(
             "p",
             "lerida turns an annotated map into a URL. Add markers, text, " +
-            "and lines to your map. All data is stored in the URL."
+            "and lines to your map.",
           ),
           m(
             "p",
-            "Share or bookmark that link and whoever opens it sees exactly the same map. There's " +
-              "no account and no server: your map lives entirely in the URL.",
+            "Share or bookmark that link and whoever opens it sees exactly the same map. " +
+            "Your data is not shared with a server; your map lives entirely in the URL.",
           ),
           m("p.about-foot", [
             "Map data © ",

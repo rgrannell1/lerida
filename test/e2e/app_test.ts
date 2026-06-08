@@ -586,7 +586,12 @@ Deno.test("clicking the brand title opens the about view, and it closes again", 
     await harness.page.waitForSelector("[data-role='about']");
     assertStringIncludes(
       (await harness.page.locator("[data-role='about']").textContent()) ?? "",
-      "Every map is a link",
+      "Make your own maps.",
+    );
+    // The brand title links out to the namesake Wikipedia article.
+    assertStringIncludes(
+      (await harness.page.locator(".about-title a").getAttribute("href")) ?? "",
+      "en.wikipedia.org/wiki/On_Exactitude_in_Science",
     );
     // The close button dismisses it.
     await harness.page.locator("[data-action='about-close']").click();
