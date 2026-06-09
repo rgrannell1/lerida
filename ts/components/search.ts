@@ -115,6 +115,17 @@ function clearSearch(): void {
   controller?.abort();
 }
 
+// The current map bounds as a Nominatim "west,north,east,south" viewbox, so OSM
+// results are constrained to what the user is looking at.
+function currentViewbox(): string | undefined {
+  const map = mapContext.map;
+  if (!map) {
+    return undefined;
+  }
+  const bounds = map.getBounds();
+  return `${bounds.getWest()},${bounds.getNorth()},${bounds.getEast()},${bounds.getSouth()}`;
+}
+
 // Debounced OSM lookup, re-armed on every keystroke. Short queries skip OSM.
 function scheduleGeocode(): void {
   if (timer !== undefined) {
@@ -132,7 +143,7 @@ function scheduleGeocode(): void {
     const live = new AbortController();
     controller = live;
     pendingQuery = ui.searchQuery;
-    geocode(query, live.signal)
+    geocode(query, { signal: live.signal, viewbox: currentViewbox() })
       .then((result) => {
         if (ui.searchQuery !== pendingQuery) {
           return;

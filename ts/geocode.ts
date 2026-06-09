@@ -37,17 +37,29 @@ function toPlace(result: NominatimResult): Place {
   };
 }
 
+export interface GeocodeOptions {
+  // Cancels an in-flight request when the query moves on.
+  signal?: AbortSignal;
+  // A "west,north,east,south" box; when set, results are restricted to it
+  // (Nominatim viewbox + bounded=1).
+  viewbox?: string;
+}
+
 const cache = new Map<string, Place[]>();
 
-// Look up `query` against Nominatim, returning up to five places. `signal`
-// cancels an in-flight request when the query moves on. Cached by query text.
-export async function geocode(query: string, signal?: AbortSignal): Promise<Place[]> {
-  const key = query.trim().toLowerCase();
+// Look up `query` against Nominatim, returning up to five places. Cached by the
+// query text and the viewbox (results differ per map view).
+export async function geocode(query: string, options: GeocodeOptions = {}): Promise<Place[]> {
+  const { signal, viewbox } = options;
+  const key = `${viewbox ?? ""}|${query.trim().toLowerCase()}`;
   const cached = cache.get(key);
   if (cached) {
     return cached;
   }
-  const url = `${ENDPOINT}?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`;
+  let url = `${ENDPOINT}?format=jsonv2&limit=5&q=${encodeURIComponent(query)}`;
+  if (viewbox) {
+    url += `&viewbox=${encodeURIComponent(viewbox)}&bounded=1`;
+  }
   const response = await fetch(url, { signal, headers: { Accept: "application/json" } });
   if (!response.ok) {
     throw new Error(`geocode failed: ${response.status}`);
