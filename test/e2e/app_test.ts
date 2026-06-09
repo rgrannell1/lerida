@@ -782,3 +782,31 @@ Deno.test("the options lock confirms, then hides the toolbar and locks the URL",
     assertEquals(await harness.page.locator("[data-role='search']").count(), 1);
   });
 });
+
+Deno.test("locking makes an already-edited pin read-only (no editor on click)", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    // Place and label a marker — labelling binds its editor popup to the layer.
+    await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
+    const pin = harness.page.locator(PIN).first();
+    await pin.waitFor();
+    await pin.click();
+    const label = harness.page.locator("[data-role='label-input']");
+    await label.waitFor();
+    await label.fill("Home");
+    await label.press("Enter");
+    await waitForParams(harness, (query) => query.includes("markers.0.label=Home"));
+    // Lock via the options panel. dispatchEvent fires the DOM click directly:
+    // after a Leaflet popup auto-pan, Playwright's actionable-click path stalls
+    // for seconds on this sequence even though the buttons are present and live
+    // (verified: a raw DOM click opens the panel in ~16ms).
+    await harness.page.locator("[data-action='options']").dispatchEvent("click");
+    await harness.page.locator("[data-action='lock']").dispatchEvent("click");
+    await harness.page.locator("[data-action='lock-confirm']").dispatchEvent("click");
+    await harness.page.waitForSelector(TOOLBAR, { state: "detached" });
+    // Clicking the re-rendered pin no longer opens the label editor.
+    await harness.page.locator(PIN).first().dispatchEvent("click");
+    await harness.page.waitForTimeout(300);
+    assertEquals(await harness.page.locator("[data-role='label-input']").count(), 0);
+  });
+});

@@ -8,6 +8,7 @@
 import m from "mithril";
 import { state, syncToUrl } from "../state.ts";
 import { ui } from "../ui.ts";
+import { rerenderFeatures } from "./map.ts";
 
 // Write the page title into meta (and the live document title), then sync the
 // URL. An empty title drops back to the "lerida" default and, since the snapshot
@@ -26,6 +27,9 @@ function lockMap(): void {
   state.editable = false;
   ui.showOptions = false;
   syncToUrl();
+  // Re-render so features placed while editable lose their editor popups and
+  // editable text and become read-only like a freshly-loaded locked map.
+  rerenderFeatures();
 }
 
 // One labelled settings row: a caption above its control.

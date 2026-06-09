@@ -69,6 +69,19 @@ function renderFeatures(map: Leaflet.Map): void {
   }
 }
 
+// Clear and re-draw every feature from current state. Wiring (editor popups,
+// contentEditable text, removal) is decided per layer at creation from the
+// editable flag, so a setting that flips that flag after load (the lock) must
+// re-render to drop the stale, still-editable layers.
+export function rerenderFeatures(): void {
+  const map = mapContext.map;
+  if (!map) {
+    return;
+  }
+  mapContext.featureLayers?.clearLayers();
+  renderFeatures(map);
+}
+
 // A bare-map click places a marker or text (depending on the tool), unless a
 // vector feature just consumed the click.
 function onMapClick(map: Leaflet.Map, event: Leaflet.LeafletEvent): void {
