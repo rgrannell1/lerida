@@ -296,6 +296,50 @@ body {
   outline: 2px solid #2c7da0;
 }
 
+.options-button {
+  align-self: flex-start;
+  padding: 6px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #2c7da0;
+  background: #e3f0f5;
+  border: 1px solid #2c7da0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.options-button:hover {
+  background: #d2e6ee;
+}
+
+.options-button.danger {
+  color: #fff;
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.options-button.danger:hover {
+  background: #a93226;
+}
+
+.lock-confirm {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lock-warning {
+  margin: 0;
+  max-width: 220px;
+  font-size: 12px;
+  color: #718096;
+}
+
+.lock-actions {
+  display: flex;
+  gap: 6px;
+}
+
 /* Shown in place of the tool palette while a feature is being edited: names the
    feature whose properties the palettes below now change. */
 .editing-banner {

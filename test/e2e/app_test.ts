@@ -761,3 +761,24 @@ Deno.test("the options panel sets the page title into the URL and document", asy
     await harness.page.waitForSelector("[data-palette='tool']");
   });
 });
+
+Deno.test("the options lock confirms, then hides the toolbar and locks the URL", async () => {
+  await withApp(async (harness) => {
+    await openApp(harness);
+    await harness.page.locator("[data-action='options']").click();
+    await harness.page.waitForSelector("[data-role='options']");
+    // Lock is a two-step confirm; Cancel backs out without locking.
+    await harness.page.locator("[data-action='lock']").click();
+    await harness.page.waitForSelector("[data-action='lock-confirm']");
+    await harness.page.locator("[data-action='lock-cancel']").click();
+    await harness.page.waitForSelector("[data-action='lock']");
+    assertEquals(await harness.page.locator(TOOLBAR).count(), 1);
+    // Confirming locks: the toolbar disappears and editable=false enters the URL.
+    await harness.page.locator("[data-action='lock']").click();
+    await harness.page.locator("[data-action='lock-confirm']").click();
+    await harness.page.waitForSelector(TOOLBAR, { state: "detached" });
+    await waitForParams(harness, (query) => query.includes("editable=false"));
+    // The search box (navigation, not editing) still shows on the locked map.
+    assertEquals(await harness.page.locator("[data-role='search']").count(), 1);
+  });
+});
