@@ -810,3 +810,32 @@ Deno.test("locking makes an already-edited pin read-only (no editor on click)", 
     assertEquals(await harness.page.locator("[data-role='label-input']").count(), 0);
   });
 });
+
+Deno.test("OSM place search shows results and jumps to a picked place", async () => {
+  await withApp(async (harness) => {
+    // Fixture for the geocoder; this page.route wins over the harness default.
+    await harness.page.route(/nominatim\.openstreetmap\.org/, (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([{
+          display_name: "Lleida, Catalunya, España",
+          lat: "41.6147",
+          lon: "0.6267",
+          boundingbox: ["41.51", "41.71", "0.52", "0.72"],
+        }]),
+      }));
+    await openApp(harness);
+    const search = harness.page.locator("[data-role='search-input']");
+    await search.fill("lleida");
+    // No local markers match, so only the debounced OSM place appears.
+    const place = harness.page.locator("[data-place-result]");
+    await place.first().waitFor();
+    assertEquals(await place.count(), 1);
+    assertStringIncludes((await place.first().textContent()) ?? "", "Lleida");
+    // Picking it fits the viewport there, writing the view to the URL, and clears.
+    await place.first().click();
+    await waitForParams(harness, (query) => query.includes("view.center.lat="));
+    assertEquals(await search.inputValue(), "");
+  });
+});

@@ -94,6 +94,10 @@ export async function launch(): Promise<Harness> {
   const server = startServer();
   const browser = await chromium.launch({ executablePath: findChromium() });
   const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  // Keep the suite offline and deterministic: stub OSM geocoding to no results by
+  // default. A test that needs places adds its own page.route (which wins).
+  await context.route(/nominatim\.openstreetmap\.org/, (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
   const page = await context.newPage();
   // Fail fast on a genuine hang rather than waiting Playwright's 30s default.
   page.setDefaultTimeout(15_000);
