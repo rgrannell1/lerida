@@ -226,6 +226,7 @@ Deno.test("the clear button removes every feature from the map and the URL", asy
       () => document.querySelectorAll("[data-feature='marker']").length === 2,
     );
     assertStringIncludes(currentQuery(harness.page), "markers.1.lat=");
+    await harness.page.locator("[data-action='options']").click();
     await harness.page.locator("[data-action='clear']").click();
     await harness.page.waitForSelector(PIN, { state: "detached" });
     assertEquals(await harness.page.locator(PIN).count(), 0);

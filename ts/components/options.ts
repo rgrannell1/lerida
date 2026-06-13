@@ -8,7 +8,7 @@
 import m from "mithril";
 import { state, syncToUrl } from "../state.ts";
 import { ui } from "../ui.ts";
-import { rerenderFeatures } from "./map.ts";
+import { clearFeatures, rerenderFeatures } from "./map.ts";
 
 // Write the page title into meta (and the live document title), then sync the
 // URL. An empty title drops back to the "lerida" default and, since the snapshot
@@ -80,6 +80,13 @@ export function Options(): m.Component {
         }, "Lock this map");
       return m("div.options-panel", { "data-role": "options" }, [
         titleRow,
+        row(
+          "Map",
+          m("button.options-button.danger", {
+            onclick: clearFeatures,
+            "data-action": "clear",
+          }, "Clear all"),
+        ),
         row("Access", lockControl),
       ]);
     },

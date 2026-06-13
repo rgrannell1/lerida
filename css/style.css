@@ -44,9 +44,9 @@ body {
   padding: 4px;
 }
 
-/* Header row: clear button (left) and minimise button (right) above the palettes.
-   Doubles as the drag handle for repositioning the whole toolbar; `touch-action:
-   none` stops a touch-drag here from scrolling/zooming the page instead. */
+/* Header row above the palettes. Doubles as the drag handle for repositioning the
+   whole toolbar; `touch-action: none` stops a touch-drag here from scrolling or
+   zooming the page instead. */
 .toolbar-header {
   display: flex;
   align-items: center;

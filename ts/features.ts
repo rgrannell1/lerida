@@ -114,8 +114,8 @@ export const MARKER_COLORS: ColorSwatch[] = [
   { name: "green", hex: "#72b026" },
   { name: "blue", hex: "#38aadd" },
   { name: "purple", hex: "#d252b9" },
-  { name: "cadetblue", hex: "#436978" },
-  { name: "darkred", hex: "#a23336" },
+  { name: "lightblue", hex: "#8adaff" },
+  { name: "pink", hex: "#ff91ea" },
   { name: "black", hex: "#575757" },
 ];
 

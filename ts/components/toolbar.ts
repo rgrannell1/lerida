@@ -17,7 +17,7 @@ import {
 } from "../features.ts";
 import { ui } from "../ui.ts";
 import { state, syncToUrl } from "../state.ts";
-import { applyTool, clearFeatures } from "./map.ts";
+import { applyTool } from "./map.ts";
 import { clearSelection, selection } from "./map/selection.ts";
 import { startToolbarDrag, toolbarStyle } from "./toolbar-drag.ts";
 import { Options } from "./options.ts";
@@ -247,7 +247,6 @@ export function Toolbar(): m.Component {
             glyphButton("cog", "Options", ui.showOptions, toggleOptions, {
               "data-action": "options",
             }),
-            glyphButton("trash", "Clear all", false, clearFeatures, { "data-action": "clear" }),
             toggleButton("chevron-up", "Minimise", "minimise"),
           ]),
         ]),
