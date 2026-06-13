@@ -40,6 +40,9 @@ export function startToolbarDrag(event: PointerEvent): void {
     return;
   }
   event.preventDefault();
+  // Pointer capture keeps the header as the target for pointermove/pointerup
+  // even after the finger slides off it — essential for touch drag on mobile.
+  header.setPointerCapture(event.pointerId);
   const rect = toolbar.getBoundingClientRect();
   const grabX = event.clientX - rect.left;
   const grabY = event.clientY - rect.top;
@@ -55,9 +58,9 @@ export function startToolbarDrag(event: PointerEvent): void {
     dragged = { left, top };
   };
   const onUp = (): void => {
-    document.removeEventListener("pointermove", onMove);
-    document.removeEventListener("pointerup", onUp);
+    header.removeEventListener("pointermove", onMove);
+    header.removeEventListener("pointerup", onUp);
   };
-  document.addEventListener("pointermove", onMove);
-  document.addEventListener("pointerup", onUp);
+  header.addEventListener("pointermove", onMove);
+  header.addEventListener("pointerup", onUp);
 }
