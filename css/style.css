@@ -44,6 +44,16 @@ body {
   padding: 4px;
 }
 
+/* On narrow screens the search bar occupies the top-left, so shift the
+   collapsed toolbar to the right to avoid overlap. */
+@media (max-width: 600px) {
+  #toolbar.collapsed {
+    left: auto;
+    right: 12px;
+    transform: none;
+  }
+}
+
 /* Header row above the palettes. Doubles as the drag handle for repositioning the
    whole toolbar; `touch-action: none` stops a touch-drag here from scrolling or
    zooming the page instead. */
@@ -83,6 +93,44 @@ body {
   width: 220px;
   max-width: calc(100vw - 24px);
   font-family: var(--font-sans);
+}
+
+/* Icon-only toggle shown on narrow screens; tapping expands the search box. */
+.search-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.3);
+  color: #4a5568;
+  font-size: 15px;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.search-toggle:hover {
+  background: #e3f0f5;
+}
+
+/* On narrow screens: show the icon, hide the box until expanded. */
+@media (max-width: 599px) {
+  .search-toggle {
+    display: flex;
+  }
+  .search .search-box {
+    display: none;
+  }
+  .search.expanded .search-box {
+    display: block;
+  }
+  .search.expanded .search-toggle {
+    display: none;
+  }
 }
 
 .search-box {

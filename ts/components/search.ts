@@ -102,10 +102,11 @@ function markerMatches(): Marker[] {
   return found.slice(0, MAX_RESULTS);
 }
 
-// Reset the box and all OSM lookup state.
+// Reset the box and all OSM lookup state, and collapse back to the icon on mobile.
 function clearSearch(): void {
   ui.searchQuery = "";
   ui.searchActive = -1;
+  ui.searchExpanded = false;
   places = [];
   loading = false;
   if (timer !== undefined) {
@@ -162,6 +163,10 @@ function scheduleGeocode(): void {
       });
   }, DEBOUNCE_MS);
 }
+
+// Set to true for one render cycle when the toggle is tapped, so the input
+// auto-focuses once it appears.
+let shouldFocus = false;
 
 // A unified result entry so keyboard nav can span both groups in order.
 type Item = { kind: "marker"; marker: Marker } | { kind: "place"; place: Place };
@@ -275,13 +280,34 @@ export function Search(): m.Component {
         }
         groups.push(...places.map((place, index) => placeRow(place, index, markers.length)));
       }
-      return m("div.search", { "data-role": "search" }, [
+      const searchClass = ui.searchExpanded ? "div.search.expanded" : "div.search";
+      return m(searchClass, { "data-role": "search" }, [
+        m("button.search-toggle", {
+          title: "Search",
+          "data-action": "search-toggle",
+          onclick: () => {
+            ui.searchExpanded = true;
+            shouldFocus = true;
+          },
+        }, m("i.fa.fa-search")),
         m("div.search-box", [
           m("input.search-input", {
             type: "text",
             placeholder: "Search markers and places…",
             spellcheck: false,
             value: ui.searchQuery,
+            oncreate: (vnode: m.VnodeDOM) => {
+              if (shouldFocus) {
+                (vnode.dom as HTMLInputElement).focus();
+                shouldFocus = false;
+              }
+            },
+            onupdate: (vnode: m.VnodeDOM) => {
+              if (shouldFocus) {
+                (vnode.dom as HTMLInputElement).focus();
+                shouldFocus = false;
+              }
+            },
             oninput: (event: InputEvent) => {
               ui.searchQuery = (event.target as HTMLInputElement).value;
               // A changed query reshuffles the results, so drop the highlight.

@@ -26,4 +26,7 @@ export const ui = {
   // Index of the keyboard-highlighted search result (-1 = none); arrow keys move
   // it, Enter jumps to it. Reset whenever the query changes.
   searchActive: -1,
+  // Whether the search box is expanded on mobile. On desktop the input is always
+  // visible; on narrow screens it collapses to the icon until tapped.
+  searchExpanded: false,
 };
