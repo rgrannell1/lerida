@@ -6,7 +6,12 @@ import type * as Leaflet from "leaflet";
 import { decorators, leaflet, type PmCreateEvent } from "./leaflet.ts";
 import { state, syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
-import { colorHex, DEFAULT_COLOR, DEFAULT_LINE_WIDTH, swatchName } from "../../features.ts";
+import {
+  colorHex,
+  DEFAULT_COLOR,
+  DEFAULT_LINE_WIDTH,
+  swatchName,
+} from "../../features.ts";
 import type { Line, Polygon } from "../../types.ts";
 import { dropFrom, markElement, wireFeature } from "./editor.ts";
 import { featureTarget } from "./context.ts";
@@ -14,6 +19,54 @@ import type { Selection } from "./selection.ts";
 
 function toPoint(latlng: Leaflet.LatLng): { lat: number; lng: number } {
   return { lat: latlng.lat, lng: latlng.lng };
+}
+
+// Format a metre distance: metres under 1 km, otherwise kilometres to 2 dp.
+function formatDistance(metres: number): string {
+  return metres < 1000
+    ? `${Math.round(metres)} m`
+    : `${(metres / 1000).toFixed(2)} km`;
+}
+
+// A non-interactive permanent label pinned at a coordinate, drawn as a divIcon so
+// it is captured in the rendered image.
+function distanceLabel(
+  latlng: Leaflet.LatLngExpression,
+  text: string,
+  className: string,
+): Leaflet.Marker {
+  return leaflet.marker(latlng, {
+    icon: leaflet.divIcon({ className, html: text }),
+    interactive: false,
+    keyboard: false,
+  });
+}
+
+// Permanent per-segment length labels plus a total for a measured line.
+function measureLabels(vertices: [number, number][]): Leaflet.Marker[] {
+  const labels: Leaflet.Marker[] = [];
+  let total = 0;
+  for (let index = 0; index < vertices.length - 1; index++) {
+    const from = leaflet.latLng(vertices[index]);
+    const to = leaflet.latLng(vertices[index + 1]);
+    const segment = from.distanceTo(to);
+    total += segment;
+    const mid = leaflet.latLng(
+      (from.lat + to.lat) / 2,
+      (from.lng + to.lng) / 2,
+    );
+    labels.push(distanceLabel(mid, formatDistance(segment), "measure-label"));
+  }
+  if (vertices.length >= 2) {
+    labels.push(
+      distanceLabel(
+        vertices[vertices.length - 1],
+        `Total ${formatDistance(total)}`,
+        "measure-total",
+      ),
+    );
+  }
+  return labels;
 }
 
 // Build a decorator drawing arrowheads along a polyline in its colour.
@@ -29,11 +82,16 @@ function arrowDecorator(line: Leaflet.Polyline, color: string): Leaflet.Layer {
 }
 
 export function addLineLayer(map: Leaflet.Map, line: Line): void {
-  const vertices = line.points.map((point) => [point.lat, point.lng] as [number, number]);
+  const vertices = line.points.map((point) =>
+    [point.lat, point.lng] as [number, number]
+  );
   const lineColor = () => line.color ?? colorHex(DEFAULT_COLOR);
   const lineWidth = () => line.width ?? DEFAULT_LINE_WIDTH;
   const target = featureTarget(map);
-  const layer = leaflet.polyline(vertices, { color: lineColor(), weight: lineWidth() });
+  const layer = leaflet.polyline(vertices, {
+    color: lineColor(),
+    weight: lineWidth(),
+  });
   layer.addTo(target);
   markElement(layer, "line");
   // The arrow decorator is rebuilt whenever colour / arrows change.
@@ -44,6 +102,12 @@ export function addLineLayer(map: Leaflet.Map, line: Line): void {
     decorator?.addTo(target);
   };
   applyArrows();
+  // Permanent segment-length and total labels for a measured line. Computed once
+  // from the fixed geometry; removed with the line.
+  const labels = line.measure ? measureLabels(vertices) : [];
+  for (const label of labels) {
+    label.addTo(target);
+  }
   const restyle = () => {
     layer.setStyle({ color: lineColor(), weight: lineWidth() });
     applyArrows();
@@ -76,17 +140,30 @@ export function addLineLayer(map: Leaflet.Map, line: Line): void {
       },
     },
   });
-  wireFeature(layer, line, () => {
-    state.lines = dropFrom(state.lines, line);
-    layer.remove();
-    decorator?.remove();
-    syncToUrl();
-  }, true, buildSelection);
+  wireFeature(
+    layer,
+    line,
+    () => {
+      state.lines = dropFrom(state.lines, line);
+      layer.remove();
+      decorator?.remove();
+      for (const label of labels) {
+        label.remove();
+      }
+      syncToUrl();
+    },
+    true,
+    buildSelection,
+  );
 }
 
 export function addPolygonLayer(map: Leaflet.Map, polygon: Polygon): void {
-  const vertices = polygon.points.map((point) => [point.lat, point.lng] as [number, number]);
-  const layer = leaflet.polygon(vertices, { color: polygon.color ?? colorHex(DEFAULT_COLOR) });
+  const vertices = polygon.points.map((point) =>
+    [point.lat, point.lng] as [number, number]
+  );
+  const layer = leaflet.polygon(vertices, {
+    color: polygon.color ?? colorHex(DEFAULT_COLOR),
+  });
   const buildSelection = (): Selection => ({
     kind: "polygon",
     layer,
@@ -99,20 +176,30 @@ export function addPolygonLayer(map: Leaflet.Map, polygon: Polygon): void {
       },
     },
   });
-  wireFeature(layer, polygon, () => {
-    state.polygons = dropFrom(state.polygons, polygon);
-    layer.remove();
-    syncToUrl();
-  }, true, buildSelection);
+  wireFeature(
+    layer,
+    polygon,
+    () => {
+      state.polygons = dropFrom(state.polygons, polygon);
+      layer.remove();
+      syncToUrl();
+    },
+    true,
+    buildSelection,
+  );
   layer.addTo(featureTarget(map));
   markElement(layer, "polygon");
 }
 
-function readLineCoords(layer: Leaflet.Polyline): { lat: number; lng: number }[] {
+function readLineCoords(
+  layer: Leaflet.Polyline,
+): { lat: number; lng: number }[] {
   return (layer.getLatLngs() as Leaflet.LatLng[]).map(toPoint);
 }
 
-function readPolygonCoords(layer: Leaflet.Polyline): { lat: number; lng: number }[] {
+function readPolygonCoords(
+  layer: Leaflet.Polyline,
+): { lat: number; lng: number }[] {
   // A polygon's getLatLngs returns an array of rings; we keep only the outer one.
   // Guard the empty case so a degenerate shape can't throw in the pm:create path.
   const rings = layer.getLatLngs() as Leaflet.LatLng[][];
@@ -126,9 +213,17 @@ export function onShapeCreated(map: Leaflet.Map, event: PmCreateEvent): void {
   const color = colorHex(ui.selectedColor);
   drawn.remove();
   if (event.shape === "Line") {
-    const line: Line = { points: readLineCoords(drawn), color, width: ui.selectedWidth };
+    const line: Line = {
+      points: readLineCoords(drawn),
+      color,
+      width: ui.selectedWidth,
+    };
     if (ui.selectedArrows) {
       line.arrows = true;
+    }
+    // The measure tool draws a normal Line, tagged so it shows distance labels.
+    if (ui.tool === "measure") {
+      line.measure = true;
     }
     state.lines = state.lines ?? [];
     state.lines.push(line);

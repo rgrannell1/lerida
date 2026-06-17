@@ -29,7 +29,10 @@ export function applyTooltip(layer: Leaflet.Layer, target: Labelled): void {
   layer.unbindTooltip();
   const label = target.label;
   if (label && label.trim().length > 0) {
-    layer.bindTooltip(renderMarkdown(label), { permanent: true, direction: "top" });
+    layer.bindTooltip(renderMarkdown(label), {
+      permanent: true,
+      direction: "top",
+    });
   }
 }
 
@@ -43,7 +46,11 @@ function setLabel(target: Labelled, layer: Leaflet.Layer, text: string): void {
 // Open a popup with a text field bound to the feature's label, plus a delete
 // button. The field syncs the label live; Enter commits (closes the popup);
 // the delete button removes the feature.
-export function openEditor(target: Labelled, layer: Leaflet.Layer, remove: () => void): void {
+export function openEditor(
+  target: Labelled,
+  layer: Leaflet.Layer,
+  remove: () => void,
+): void {
   const input = document.createElement("input");
   input.type = "text";
   input.className = "marker-label-input";
@@ -122,7 +129,8 @@ export function wireFeature(
       return;
     }
     if (consumesClick) {
-      mapContext.consumedClick = (event as Leaflet.LeafletMouseEvent).originalEvent;
+      mapContext.consumedClick =
+        (event as Leaflet.LeafletMouseEvent).originalEvent;
     }
     openEditor(target, layer, remove);
     if (buildSelection) {

@@ -35,7 +35,10 @@ export function About(): m.Component {
     },
     view() {
       // Clicking the dimmed backdrop closes; clicks inside the card don't.
-      return m("div.about-backdrop", { "data-role": "about", onclick: closeAbout }, [
+      return m("div.about-backdrop", {
+        "data-role": "about",
+        onclick: closeAbout,
+      }, [
         m("div.about-card", {
           role: "dialog",
           "aria-modal": "true",
@@ -51,12 +54,12 @@ export function About(): m.Component {
           m(
             "p",
             "lerida turns an annotated map into a URL. Add markers, text, " +
-            "and lines to your map.",
+              "and lines to your map.",
           ),
           m(
             "p",
             "Share or bookmark that link and whoever opens it sees exactly the same map. " +
-            "Your data is not shared with a server; your map lives entirely in the URL.",
+              "Your data is not shared with a server; your map lives entirely in the URL.",
           ),
           m("p.about-foot", [
             "Map data © ",

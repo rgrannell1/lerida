@@ -7,7 +7,13 @@ import { leaflet } from "./leaflet.ts";
 import { renderMarkdown } from "../../markdown.ts";
 import { state, syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
-import { colorHex, DEFAULT_COLOR, DEFAULT_SIZE, fontSizeFor, swatchName } from "../../features.ts";
+import {
+  colorHex,
+  DEFAULT_COLOR,
+  DEFAULT_SIZE,
+  fontSizeFor,
+  swatchName,
+} from "../../features.ts";
 import type { TextLabel } from "../../types.ts";
 import { dropFrom, eraserActive } from "./editor.ts";
 import { featureTarget, isEditable } from "./context.ts";
@@ -24,7 +30,11 @@ function commitText(textItem: TextLabel, layer: Leaflet.Marker): void {
 
 // Render a text label as an editable divIcon. `focus` puts the caret in it
 // immediately (used when the label is freshly placed).
-export function addTextLayer(map: Leaflet.Map, textItem: TextLabel, focus: boolean): void {
+export function addTextLayer(
+  map: Leaflet.Map,
+  textItem: TextLabel,
+  focus: boolean,
+): void {
   const icon = leaflet.divIcon({
     className: "map-text-wrapper",
     html: `<div class="map-text"></div>`,

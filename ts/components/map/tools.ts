@@ -29,7 +29,9 @@ export function applyTool(): void {
     return;
   }
   pm.disableDraw();
-  if (ui.tool === "line") {
+  // Measure draws a normal polyline; the distance labels are added when the
+  // shape is committed.
+  if (ui.tool === "line" || ui.tool === "measure") {
     pm.enableDraw("Line", drawOptions());
   } else if (ui.tool === "polygon") {
     pm.enableDraw("Polygon", drawOptions());
@@ -43,7 +45,7 @@ function finishDrawingToMarker(): void {
   if (!map) {
     return;
   }
-  const shapeName = ui.tool === "line" ? "Line" : "Polygon";
+  const shapeName = ui.tool === "polygon" ? "Polygon" : "Line";
   const draw = geoman(map)?.Draw?.[shapeName];
   if (draw?._finishShape) {
     try {
@@ -72,7 +74,7 @@ export function onKeyDown(event: KeyboardEvent): void {
   if (event.key !== "Escape" || !isEditable()) {
     return;
   }
-  if (ui.tool === "line" || ui.tool === "polygon") {
+  if (ui.tool === "line" || ui.tool === "polygon" || ui.tool === "measure") {
     finishDrawingToMarker();
   }
 }

@@ -5,11 +5,30 @@ import type * as Leaflet from "leaflet";
 import { awesomeMarkers, leaflet } from "./leaflet.ts";
 import { state, syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
-import { DEFAULT_COLOR, DEFAULT_FEATURE, iconFor, swatchName } from "../../features.ts";
+import {
+  DEFAULT_COLOR,
+  DEFAULT_FEATURE,
+  iconFor,
+  swatchName,
+} from "../../features.ts";
 import type { Marker } from "../../types.ts";
 import { dropFrom, markElement, wireFeature } from "./editor.ts";
 import { featureTarget } from "./context.ts";
+import { rerenderFeatures } from "../map.ts";
 import type { Selection } from "./selection.ts";
+
+// In numbered mode the markers are an ordered numbered list: set each marker's
+// label to its 1-based position so placement auto-increments and deletes leave
+// no gaps. A no-op when numbered mode is off.
+export function renumberMarkers(): void {
+  if (!ui.numberedMode) {
+    return;
+  }
+  const markers = state.markers ?? [];
+  for (let index = 0; index < markers.length; index++) {
+    markers[index].label = String(index + 1);
+  }
+}
 
 // How far above the marker position the label tooltip sits, clearing the pin.
 const MARKER_TOOLTIP_ANCHOR: [number, number] = [0, -38];
@@ -19,7 +38,11 @@ const MARKER_Z_INDEX = 1000;
 // Build a coloured pin containing the feature's Font Awesome glyph. The tooltip
 // anchor lifts the label above the pin so the pin isn't covered by its own label.
 function awesomeIcon(glyph: string, color: string): Leaflet.Icon {
-  const icon = awesomeMarkers.icon({ icon: glyph, prefix: "fa", markerColor: color });
+  const icon = awesomeMarkers.icon({
+    icon: glyph,
+    prefix: "fa",
+    markerColor: color,
+  });
   (icon.options as { tooltipAnchor?: Leaflet.PointExpression }).tooltipAnchor =
     MARKER_TOOLTIP_ANCHOR;
   return icon;
@@ -27,7 +50,10 @@ function awesomeIcon(glyph: string, color: string): Leaflet.Icon {
 
 // The pin for a marker's current feature/colour (falling back to the defaults).
 function pinIcon(marker: Marker): Leaflet.Icon {
-  return awesomeIcon(iconFor(marker.feature ?? DEFAULT_FEATURE), marker.color ?? DEFAULT_COLOR);
+  return awesomeIcon(
+    iconFor(marker.feature ?? DEFAULT_FEATURE),
+    marker.color ?? DEFAULT_COLOR,
+  );
 }
 
 export function addMarkerLayer(map: Leaflet.Map, marker: Marker): void {
@@ -58,11 +84,23 @@ export function addMarkerLayer(map: Leaflet.Map, marker: Marker): void {
       },
     },
   });
-  wireFeature(layer, marker, () => {
-    state.markers = dropFrom(state.markers, marker);
-    layer.remove();
-    syncToUrl();
-  }, false, buildSelection);
+  wireFeature(
+    layer,
+    marker,
+    () => {
+      state.markers = dropFrom(state.markers, marker);
+      layer.remove();
+      // Renumber the survivors so a numbered list has no gaps, then re-render so
+      // their labels update; both are no-ops when numbered mode is off.
+      if (ui.numberedMode) {
+        renumberMarkers();
+        rerenderFeatures();
+      }
+      syncToUrl();
+    },
+    false,
+    buildSelection,
+  );
   layer.addTo(featureTarget(map));
   markElement(layer, "marker");
 }
@@ -77,6 +115,9 @@ export function placeMarker(map: Leaflet.Map, point: Leaflet.LatLng): void {
   };
   state.markers = state.markers ?? [];
   state.markers.push(marker);
+  // In numbered mode the new pin's label is its 1-based position (the next
+  // number); renumber covers it and is a no-op otherwise.
+  renumberMarkers();
   addMarkerLayer(map, marker);
   syncToUrl();
 }

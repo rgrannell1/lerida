@@ -5,7 +5,12 @@
 // the URL query string or the DOM, never on tile imagery.
 
 import { serveDir } from "@std/http/file-server";
-import { type Browser, type BrowserContext, chromium, type Page } from "playwright";
+import {
+  type Browser,
+  type BrowserContext,
+  chromium,
+  type Page,
+} from "playwright";
 import LZString from "lz-string";
 
 // Absolute path to the repo's `web/` directory (served as the document root).
@@ -39,7 +44,7 @@ export function startServer(): Server {
 // resolve an executable ourselves: an explicit override, then a cached
 // `ms-playwright` Chromium, then the system Chrome. Returns undefined to let
 // Playwright try its own default as a last resort.
-function findChromium(): string | undefined {
+export function findChromium(): string | undefined {
   const override = Deno.env.get("LERIDA_CHROMIUM");
   if (override) {
     return override;
@@ -49,7 +54,9 @@ function findChromium(): string | undefined {
     const cache = `${home}/.cache/ms-playwright`;
     try {
       const builds = [...Deno.readDirSync(cache)]
-        .filter((entry) => entry.isDirectory && entry.name.startsWith("chromium-"))
+        .filter((entry) =>
+          entry.isDirectory && entry.name.startsWith("chromium-")
+        )
         .map((entry) => entry.name)
         .sort()
         .reverse();
@@ -93,11 +100,20 @@ export interface Harness {
 export async function launch(): Promise<Harness> {
   const server = startServer();
   const browser = await chromium.launch({ executablePath: findChromium() });
-  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const context = await browser.newContext({
+    viewport: { width: 1280, height: 800 },
+  });
   // Keep the suite offline and deterministic: stub OSM geocoding to no results by
   // default. A test that needs places adds its own page.route (which wins).
-  await context.route(/nominatim\.openstreetmap\.org/, (route) =>
-    route.fulfill({ status: 200, contentType: "application/json", body: "[]" }));
+  await context.route(
+    /nominatim\.openstreetmap\.org/,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: "[]",
+      }),
+  );
   const page = await context.newPage();
   // Fail fast on a genuine hang rather than waiting Playwright's 30s default.
   page.setDefaultTimeout(15_000);
@@ -122,7 +138,8 @@ export async function openApp(harness: Harness, query = ""): Promise<void> {
   await harness.page.waitForSelector("#map.leaflet-container");
   await harness.page.waitForFunction(() => {
     const map = document.querySelector("#map");
-    return !!map && map.clientWidth > 0 && map.querySelector(".leaflet-tile-pane") !== null;
+    return !!map && map.clientWidth > 0 &&
+      map.querySelector(".leaflet-tile-pane") !== null;
   });
 }
 

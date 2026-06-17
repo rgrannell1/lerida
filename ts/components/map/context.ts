@@ -29,6 +29,8 @@ export function isEditable(): boolean {
 }
 
 // Where a feature layer is added — the feature group if present, else the map.
-export function featureTarget(map: Leaflet.Map): Leaflet.Map | Leaflet.LayerGroup {
+export function featureTarget(
+  map: Leaflet.Map,
+): Leaflet.Map | Leaflet.LayerGroup {
   return mapContext.featureLayers ?? map;
 }

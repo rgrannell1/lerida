@@ -30,6 +30,8 @@ export interface Line {
   label?: string;
   arrows?: boolean;
   width?: number;
+  // When set, the line shows per-segment lengths and a running total on the map.
+  measure?: boolean;
 }
 
 // A polygon region: a list of boundary vertices with an optional colour and label.

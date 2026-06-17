@@ -62,7 +62,12 @@ export function geoman(map: Leaflet.Map): GeomanMap | undefined {
 interface ArrowSymbolOptions {
   pixelSize?: number;
   polygon?: boolean;
-  pathOptions?: { color: string; weight?: number; fillOpacity?: number; stroke?: boolean };
+  pathOptions?: {
+    color: string;
+    weight?: number;
+    fillOpacity?: number;
+    stroke?: boolean;
+  };
 }
 
 interface DecoratorPattern {
@@ -77,7 +82,10 @@ interface DecoratorOptions {
 
 interface PolylineDecoratorPlugin {
   Symbol: { arrowHead(options: ArrowSymbolOptions): unknown };
-  polylineDecorator(line: Leaflet.Polyline, options: DecoratorOptions): Leaflet.Layer;
+  polylineDecorator(
+    line: Leaflet.Polyline,
+    options: DecoratorOptions,
+  ): Leaflet.Layer;
 }
 
 export const decorators = leaflet as unknown as PolylineDecoratorPlugin;

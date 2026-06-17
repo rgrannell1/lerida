@@ -1,8 +1,10 @@
 .claude/settings.local.json
 .vscode/
-work.md
+*.md
+!README.md
 web/dist/
 node_modules/
 .playwright-mcp/
 web/index.html
 web/sw.js
+.claude/worktrees/

@@ -9,11 +9,11 @@ import {
   type ColorSwatch,
   type Feature,
   FEATURES,
-  type LineWidth,
   LINE_WIDTHS,
+  type LineWidth,
   MARKER_COLORS,
-  type TextSize,
   TEXT_SIZES,
+  type TextSize,
 } from "../features.ts";
 import { ui } from "../ui.ts";
 import { state, syncToUrl } from "../state.ts";
@@ -21,6 +21,7 @@ import { applyTool } from "./map.ts";
 import { clearSelection, selection } from "./map/selection.ts";
 import { startToolbarDrag, toolbarStyle } from "./toolbar-drag.ts";
 import { Options } from "./options.ts";
+import { Share } from "./share.ts";
 
 // One drawing tool: its id, the glyph shown, a hover/title label, and whether it
 // is common enough to show before the "…" overflow toggle is expanded.
@@ -37,6 +38,7 @@ const TOOLS: Tool[] = [
   { id: "text", glyph: "font", title: "Text", common: true },
   { id: "eraser", glyph: "eraser", title: "Eraser", common: true },
   { id: "polygon", glyph: "square-o", title: "Polygon" },
+  { id: "measure", glyph: "arrows-h", title: "Measure", common: true },
 ];
 
 function selectTool(id: string): void {
@@ -104,10 +106,22 @@ function openAbout(): void {
 }
 
 // Toggle the options panel (page title + other meta settings). Opening it drops
-// any feature selection so the panel, not a feature, owns the toolbar body.
+// any feature selection and closes the share panel so one panel owns the toolbar
+// body.
 function toggleOptions(): void {
   ui.showOptions = !ui.showOptions;
   if (ui.showOptions) {
+    ui.showShare = false;
+    clearSelection();
+  }
+}
+
+// Toggle the share panel (copy the render.png image link). Mutually exclusive
+// with the options panel and any feature selection.
+function toggleShare(): void {
+  ui.showShare = !ui.showShare;
+  if (ui.showShare) {
+    ui.showOptions = false;
     clearSelection();
   }
 }
@@ -122,45 +136,81 @@ function glyphButton(
   onclick: () => void,
   data: Record<string, string> = {},
 ): m.Vnode {
-  const selector = active ? "button.icon-button.selected" : "button.icon-button";
+  const selector = active
+    ? "button.icon-button.selected"
+    : "button.icon-button";
   return m(selector, { title, onclick, ...data }, m(`i.fa.fa-${glyph}`));
 }
 
 function toolButton(tool: Tool): m.Vnode {
-  return glyphButton(tool.glyph, tool.title, ui.tool === tool.id, () => selectTool(tool.id), {
-    "data-tool": tool.id,
-  });
+  return glyphButton(
+    tool.glyph,
+    tool.title,
+    ui.tool === tool.id,
+    () => selectTool(tool.id),
+    {
+      "data-tool": tool.id,
+    },
+  );
 }
 
 // Render a POI-category button showing its glyph, highlighted when selected.
 function featureButton(feature: Feature): m.Vnode {
-  const current = selection.current?.feature ? selection.current.feature.get() : ui.selectedFeature;
+  const current = selection.current?.feature
+    ? selection.current.feature.get()
+    : ui.selectedFeature;
   const active = current === feature.id;
-  return glyphButton(feature.icon, feature.name, active, () => selectFeature(feature.id), {
-    "data-feature-id": feature.id,
-  });
+  return glyphButton(
+    feature.icon,
+    feature.name,
+    active,
+    () => selectFeature(feature.id),
+    {
+      "data-feature-id": feature.id,
+    },
+  );
 }
 
 // The "…" toggle that reveals / hides the less-common categories.
 function moreFeaturesButton(): m.Vnode {
-  return glyphButton("ellipsis-h", "More categories", ui.showAllFeatures, toggleShowAllFeatures, {
-    "data-action": "more-features",
-  });
+  return glyphButton(
+    "ellipsis-h",
+    "More categories",
+    ui.showAllFeatures,
+    toggleShowAllFeatures,
+    {
+      "data-action": "more-features",
+    },
+  );
 }
 
 // The "…" toggle that reveals / hides the less-common tools (polygon).
 function moreToolsButton(): m.Vnode {
-  return glyphButton("ellipsis-h", "More tools", ui.showAllTools, toggleShowAllTools, {
-    "data-action": "more-tools",
-  });
+  return glyphButton(
+    "ellipsis-h",
+    "More tools",
+    ui.showAllTools,
+    toggleShowAllTools,
+    {
+      "data-action": "more-tools",
+    },
+  );
 }
 
 // A text-size button showing a scaled "A", highlighted when selected.
 function sizeButton(size: TextSize): m.Vnode {
-  const current = selection.current?.size ? selection.current.size.get() : ui.selectedSize;
+  const current = selection.current?.size
+    ? selection.current.size.get()
+    : ui.selectedSize;
   const active = current === size.id;
-  const selector = active ? "button.icon-button.selected" : "button.icon-button";
-  const letter = m("span", { style: `font-size:${Math.min(size.px, 22)}px` }, "A");
+  const selector = active
+    ? "button.icon-button.selected"
+    : "button.icon-button";
+  const letter = m(
+    "span",
+    { style: `font-size:${Math.min(size.px, 22)}px` },
+    "A",
+  );
   return m(selector, {
     title: size.name,
     // Keep the focused text label focused so the click can resize it.
@@ -172,9 +222,13 @@ function sizeButton(size: TextSize): m.Vnode {
 
 // A line-thickness button showing a bar at that stroke weight, highlighted when selected.
 function widthButton(width: LineWidth): m.Vnode {
-  const current = selection.current?.width ? selection.current.width.get() : ui.selectedWidth;
+  const current = selection.current?.width
+    ? selection.current.width.get()
+    : ui.selectedWidth;
   const active = current === width.px;
-  const selector = active ? "button.icon-button.selected" : "button.icon-button";
+  const selector = active
+    ? "button.icon-button.selected"
+    : "button.icon-button";
   const bar = m("span.width-bar", { style: `height:${width.px}px` });
   return m(selector, {
     title: width.name,
@@ -185,9 +239,13 @@ function widthButton(width: LineWidth): m.Vnode {
 
 function colorButton(swatch: ColorSwatch): m.Vnode {
   // Highlight the selected feature's colour when editing one, else the default.
-  const current = selection.current?.color ? selection.current.color.get() : ui.selectedColor;
+  const current = selection.current?.color
+    ? selection.current.color.get()
+    : ui.selectedColor;
   const selected = current === swatch.name;
-  const selector = selected ? "button.color-button.selected" : "button.color-button";
+  const selector = selected
+    ? "button.color-button.selected"
+    : "button.color-button";
   return m(selector, {
     title: swatch.name,
     style: `background:${swatch.hex}`,
@@ -231,7 +289,14 @@ export function Toolbar(): m.Component {
       // While a feature is selected the palettes target it — show those it
       // exposes; otherwise they follow the active tool (for the next feature).
       const sel = selection.current;
-      const shows = (has: boolean, toolId: string) => (sel ? has : ui.tool === toolId);
+      const shows = (
+        has: boolean,
+        toolId: string,
+      ) => (sel ? has : ui.tool === toolId);
+      // Width and arrows apply to both the line and measure tools (measure is a
+      // line that also shows distances).
+      const showsLine = (has: boolean) =>
+        sel ? has : (ui.tool === "line" || ui.tool === "measure");
       // Active non-common tool stays visible even when the overflow is collapsed.
       const shownTools = TOOLS.filter((tool) =>
         tool.common || ui.showAllTools || ui.tool === tool.id
@@ -244,6 +309,9 @@ export function Toolbar(): m.Component {
             "data-action": "about",
           }, "lerida"),
           m("div.toolbar-actions", [
+            glyphButton("share-alt", "Share image", ui.showShare, toggleShare, {
+              "data-action": "share",
+            }),
             glyphButton("cog", "Options", ui.showOptions, toggleOptions, {
               "data-action": "options",
             }),
@@ -255,14 +323,27 @@ export function Toolbar(): m.Component {
       // tools and their palettes with map-level meta settings.
       if (ui.showOptions) {
         rows.push(m(Options));
-        return m("div#toolbar", { "data-role": "toolbar", style: toolbarStyle() }, rows);
+        return m("div#toolbar", {
+          "data-role": "toolbar",
+          style: toolbarStyle(),
+        }, rows);
+      }
+      // The share panel likewise takes over the body, with the image link to copy.
+      if (ui.showShare) {
+        rows.push(m(Share));
+        return m("div#toolbar", {
+          "data-role": "toolbar",
+          style: toolbarStyle(),
+        }, rows);
       }
       // Editing a feature replaces the tool palette with a cue naming it; the
       // palettes below act on the selection. Closing its editor restores tools.
       if (sel) {
         rows.push(
-          m("div.editing-banner", { "data-role": "editing", "data-editing": sel.kind },
-            `Editing ${sel.kind}`),
+          m("div.editing-banner", {
+            "data-role": "editing",
+            "data-editing": sel.kind,
+          }, `Editing ${sel.kind}`),
         );
       } else {
         rows.push(
@@ -275,7 +356,9 @@ export function Toolbar(): m.Component {
       // The category palette applies to markers; size to text; width + arrows to
       // lines. Less-common categories hide behind a "…" toggle.
       if (shows(!!sel?.feature, "marker")) {
-        const shown = FEATURES.filter((feature) => feature.common || ui.showAllFeatures);
+        const shown = FEATURES.filter((feature) =>
+          feature.common || ui.showAllFeatures
+        );
         rows.push(
           m("div.palette.feature-palette", {
             "data-palette": "feature",
@@ -284,15 +367,23 @@ export function Toolbar(): m.Component {
       }
       if (shows(!!sel?.size, "text")) {
         rows.push(
-          m("div.palette.size-palette", { "data-palette": "size" }, TEXT_SIZES.map(sizeButton)),
+          m(
+            "div.palette.size-palette",
+            { "data-palette": "size" },
+            TEXT_SIZES.map(sizeButton),
+          ),
         );
       }
-      if (shows(!!sel?.width, "line")) {
+      if (showsLine(!!sel?.width)) {
         rows.push(
-          m("div.palette.width-palette", { "data-palette": "width" }, LINE_WIDTHS.map(widthButton)),
+          m(
+            "div.palette.width-palette",
+            { "data-palette": "width" },
+            LINE_WIDTHS.map(widthButton),
+          ),
         );
       }
-      if (shows(!!sel?.arrows, "line")) {
+      if (showsLine(!!sel?.arrows)) {
         const arrowsActive = sel?.arrows ? sel.arrows.get() : ui.selectedArrows;
         const arrowsBtn = glyphButton(
           "long-arrow-right",
@@ -301,7 +392,13 @@ export function Toolbar(): m.Component {
           toggleArrows,
           { "data-action": "arrows" },
         );
-        rows.push(m("div.palette.arrows-palette", { "data-palette": "arrows" }, arrowsBtn));
+        rows.push(
+          m(
+            "div.palette.arrows-palette",
+            { "data-palette": "arrows" },
+            arrowsBtn,
+          ),
+        );
       }
       // Colour applies to any selection and to every feature-creating tool (not the eraser).
       if (sel ? !!sel.color : ui.tool !== "eraser") {

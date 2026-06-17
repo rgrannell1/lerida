@@ -24,8 +24,14 @@
       "description": "Free text labels.",
       "items": { "$ref": "#/$defs/Text", "description": "One text label." }
     },
-    "collapsed": { "type": "boolean", "description": "Whether the toolbar is minimised." },
-    "editable": { "type": "boolean", "description": "Whether the map can be edited (default true)." },
+    "collapsed": {
+      "type": "boolean",
+      "description": "Whether the toolbar is minimised."
+    },
+    "editable": {
+      "type": "boolean",
+      "description": "Whether the map can be edited (default true)."
+    },
     "meta": { "$ref": "#/$defs/Meta", "description": "App-level settings." }
   },
   "$defs": {
@@ -62,9 +68,15 @@
       "properties": {
         "lat": { "type": "number", "description": "Latitude." },
         "lng": { "type": "number", "description": "Longitude." },
-        "feature": { "type": "string", "description": "POI category id (rendered as a glyph pin)." },
+        "feature": {
+          "type": "string",
+          "description": "POI category id (rendered as a glyph pin)."
+        },
         "color": { "type": "string", "description": "Pin colour (CSS)." },
-        "label": { "type": "string", "description": "Text label shown as a tooltip." }
+        "label": {
+          "type": "string",
+          "description": "Text label shown as a tooltip."
+        }
       }
     },
     "Line": {
@@ -78,9 +90,22 @@
           "items": { "$ref": "#/$defs/LatLng", "description": "One vertex." }
         },
         "color": { "type": "string", "description": "Stroke colour (CSS)." },
-        "label": { "type": "string", "description": "Text label shown as a tooltip." },
-        "arrows": { "type": "boolean", "description": "Show directional arrows along the line." },
-        "width": { "type": "number", "description": "Stroke weight in pixels." }
+        "label": {
+          "type": "string",
+          "description": "Text label shown as a tooltip."
+        },
+        "arrows": {
+          "type": "boolean",
+          "description": "Show directional arrows along the line."
+        },
+        "width": {
+          "type": "number",
+          "description": "Stroke weight in pixels."
+        },
+        "measure": {
+          "type": "boolean",
+          "description": "Show per-segment lengths and a total along the line."
+        }
       }
     },
     "Polygon": {
@@ -93,8 +118,14 @@
           "description": "Boundary vertices.",
           "items": { "$ref": "#/$defs/LatLng", "description": "One vertex." }
         },
-        "color": { "type": "string", "description": "Stroke / fill colour (CSS)." },
-        "label": { "type": "string", "description": "Text label shown as a tooltip." }
+        "color": {
+          "type": "string",
+          "description": "Stroke / fill colour (CSS)."
+        },
+        "label": {
+          "type": "string",
+          "description": "Text label shown as a tooltip."
+        }
       }
     },
     "Text": {
@@ -106,7 +137,10 @@
         "lng": { "type": "number", "description": "Longitude." },
         "text": { "type": "string", "description": "The label text." },
         "color": { "type": "string", "description": "Text colour (CSS)." },
-        "size": { "type": "string", "description": "Text size id (normal | large | xlarge)." }
+        "size": {
+          "type": "string",
+          "description": "Text size id (normal | large | xlarge)."
+        }
       }
     }
   }

@@ -33,7 +33,8 @@ const TILE_ATTRIBUTION = "© OpenStreetMap contributors";
 // (e.g. zoom but no centre); fall back per-field rather than dereferencing blind.
 function initialCenter(): [number, number] {
   const center = state.view?.center;
-  return center && typeof center.lat === "number" && typeof center.lng === "number"
+  return center && typeof center.lat === "number" &&
+      typeof center.lng === "number"
     ? [center.lat, center.lng]
     : DEFAULT_CENTER;
 }
@@ -119,7 +120,17 @@ export function MapView(): m.Component {
       const map = leaflet.map(node).setView(initialCenter(), initialZoom());
       // Keep the zoom control clear of the top toolbar (overlaps on mobile).
       map.zoomControl.setPosition("bottomleft");
-      leaflet.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION }).addTo(map);
+      const tiles = leaflet.tileLayer(TILE_URL, {
+        attribution: TILE_ATTRIBUTION,
+      });
+      // Signal "scene complete" once all initial tiles have loaded. Features are
+      // drawn synchronously below, so tiles-loaded means the whole map is painted.
+      // The image worker waits on this flag before screenshotting (design.md
+      // line 20); harmless on the live site.
+      tiles.on("load", () => {
+        (globalThis as { __leridaReady?: boolean }).__leridaReady = true;
+      });
+      tiles.addTo(map);
       mapContext.map = map;
       mapContext.featureLayers = leaflet.layerGroup().addTo(map);
       renderFeatures(map);

@@ -34,7 +34,9 @@ export interface Selection {
 }
 
 // The active selection, or undefined when nothing is being edited.
-export const selection: { current: Selection | undefined } = { current: undefined };
+export const selection: { current: Selection | undefined } = {
+  current: undefined,
+};
 
 // Select a feature; redraw so the toolbar reflects its properties.
 export function select(next: Selection): void {

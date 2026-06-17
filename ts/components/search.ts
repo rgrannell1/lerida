@@ -54,7 +54,8 @@ function parseQuery(raw: string): Query {
 // The words to send to OSM: the query's parts minus any "*" wildcard and colon.
 function osmQueryText(): string {
   const { category, text } = parseQuery(ui.searchQuery);
-  return [category, text].filter((part) => part && part !== "*").join(" ").trim();
+  return [category, text].filter((part) => part && part !== "*").join(" ")
+    .trim();
 }
 
 // True if every character of `query` appears in `text` in order (a light fuzzy
@@ -169,7 +170,10 @@ function scheduleGeocode(): void {
 let shouldFocus = false;
 
 // A unified result entry so keyboard nav can span both groups in order.
-type Item = { kind: "marker"; marker: Marker } | { kind: "place"; place: Place };
+type Item = { kind: "marker"; marker: Marker } | {
+  kind: "place";
+  place: Place;
+};
 
 function items(markers: Marker[]): Item[] {
   return [
@@ -224,7 +228,11 @@ function markerRow(marker: Marker, index: number): m.Vnode {
   ]);
 }
 
-function placeRow(place: Place, placeIndex: number, markerCount: number): m.Vnode {
+function placeRow(
+  place: Place,
+  placeIndex: number,
+  markerCount: number,
+): m.Vnode {
   const combined = markerCount + placeIndex;
   const selector = ui.searchActive === combined
     ? "button.search-result.active"
@@ -244,7 +252,9 @@ function placeRow(place: Place, placeIndex: number, markerCount: number): m.Vnod
 function onKeyDown(event: KeyboardEvent, list: Item[]): void {
   if (event.key === "ArrowDown") {
     event.preventDefault();
-    ui.searchActive = list.length === 0 ? -1 : (ui.searchActive + 1) % list.length;
+    ui.searchActive = list.length === 0
+      ? -1
+      : (ui.searchActive + 1) % list.length;
   } else if (event.key === "ArrowUp") {
     event.preventDefault();
     ui.searchActive = list.length === 0
@@ -278,9 +288,15 @@ export function Search(): m.Component {
         if (showHeadings) {
           groups.push(m("div.search-heading", "Places"));
         }
-        groups.push(...places.map((place, index) => placeRow(place, index, markers.length)));
+        groups.push(
+          ...places.map((place, index) =>
+            placeRow(place, index, markers.length)
+          ),
+        );
       }
-      const searchClass = ui.searchExpanded ? "div.search.expanded" : "div.search";
+      const searchClass = ui.searchExpanded
+        ? "div.search.expanded"
+        : "div.search";
       return m(searchClass, { "data-role": "search" }, [
         m("button.search-toggle", {
           title: "Search",
@@ -318,7 +334,9 @@ export function Search(): m.Component {
             "data-role": "search-input",
           }),
           loading
-            ? m("i.fa.fa-spinner.fa-spin.search-spinner", { "data-role": "search-loading" })
+            ? m("i.fa.fa-spinner.fa-spin.search-spinner", {
+              "data-role": "search-loading",
+            })
             : null,
           hasQuery
             ? m("button.search-clear", {

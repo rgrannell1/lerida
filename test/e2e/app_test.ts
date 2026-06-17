@@ -8,7 +8,13 @@
 // third-party libraries and change without notice.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { currentQuery, type Harness, launch, openApp, waitForParams } from "./helpers.ts";
+import {
+  currentQuery,
+  type Harness,
+  launch,
+  openApp,
+  waitForParams,
+} from "./helpers.ts";
 
 // Selectors keyed off our own data-* attributes.
 const PIN = "[data-feature='marker']";
@@ -28,7 +34,9 @@ const LINE_MID = {
 };
 
 // Run `body` against a fresh harness, always tearing it down afterwards.
-async function withApp(body: (harness: Harness) => Promise<void>): Promise<void> {
+async function withApp(
+  body: (harness: Harness) => Promise<void>,
+): Promise<void> {
   const harness = await launch();
   try {
     await body(harness);
@@ -53,7 +61,10 @@ async function drawLine(harness: Harness): Promise<void> {
   await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
   await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
   await harness.page.keyboard.press("Escape");
-  await waitForParams(harness, (query) => query.includes("lines.0.points.0.lat="));
+  await waitForParams(
+    harness,
+    (query) => query.includes("lines.0.points.0.lat="),
+  );
   await harness.page.waitForSelector("[data-palette='feature']");
 }
 
@@ -74,9 +85,9 @@ Deno.test("app loads and renders the map without console errors", async () => {
     harness.page.on("pageerror", (error) => errors.push(error.message));
     await openApp(harness);
     await harness.page.waitForSelector(TOOLBAR);
-    // The common drawing tools (marker / line / text / eraser) show by default;
-    // polygon hides behind the "…" overflow.
-    assertEquals(await harness.page.locator("[data-tool]").count(), 4);
+    // The common drawing tools (marker / line / text / eraser / measure) show by
+    // default; polygon hides behind the "…" overflow.
+    assertEquals(await harness.page.locator("[data-tool]").count(), 5);
     // Offline tile / favicon fetches 404 — those aside, nothing should error.
     const ignore = /tile|openstreetmap|net::|404|Failed to load/i;
     const real = errors.filter((text) => !ignore.test(text));
@@ -121,7 +132,10 @@ Deno.test("right-clicking a marker removes it from the map and the URL", async (
     await pin.click({ button: "right" });
     await harness.page.waitForSelector(PIN, { state: "detached" });
     assertEquals(await harness.page.locator(PIN).count(), 0);
-    assert(!currentQuery(harness.page).includes("markers."), "marker should be gone from the URL");
+    assert(
+      !currentQuery(harness.page).includes("markers."),
+      "marker should be gone from the URL",
+    );
   });
 });
 
@@ -136,7 +150,10 @@ Deno.test("clicking a marker opens the label editor; Enter commits the label", a
     await input.waitFor();
     await input.fill("Home");
     await input.press("Enter");
-    await waitForParams(harness, (query) => query.includes("markers.0.label=Home"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("markers.0.label=Home"),
+    );
     assertStringIncludes(currentQuery(harness.page), "markers.0.label=Home");
   });
 });
@@ -150,7 +167,10 @@ Deno.test("the label editor's delete button removes the feature", async () => {
     await pin.click();
     await harness.page.locator("[data-role='label-delete']").click();
     await harness.page.waitForSelector(PIN, { state: "detached" });
-    assert(!currentQuery(harness.page).includes("markers."), "marker should be gone from the URL");
+    assert(
+      !currentQuery(harness.page).includes("markers."),
+      "marker should be gone from the URL",
+    );
   });
 });
 
@@ -160,13 +180,19 @@ Deno.test("the text tool places an editable label; typing writes it to the URL",
     await harness.page.locator("[data-tool='text']").click();
     // The size palette appears in text mode; the category palette is hidden.
     await harness.page.waitForSelector("[data-palette='size']");
-    assertEquals(await harness.page.locator("[data-palette='feature']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-palette='feature']").count(),
+      0,
+    );
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     const editable = harness.page.locator(TEXT_INPUT).first();
     await editable.waitFor();
     await editable.type("Cork");
     await editable.press("Enter");
-    await waitForParams(harness, (query) => query.includes("texts.0.text=Cork"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("texts.0.text=Cork"),
+    );
     assertStringIncludes(currentQuery(harness.page), "texts.0.text=Cork");
   });
 });
@@ -179,7 +205,10 @@ Deno.test("the toolbar minimises into the URL and survives a reload", async () =
     assertStringIncludes(currentQuery(harness.page), "collapsed=true");
     // Collapsed → only the restore button is shown, the palettes are gone.
     await harness.page.waitForSelector("[data-action='restore']");
-    assertEquals(await harness.page.locator("[data-palette='tool']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-palette='tool']").count(),
+      0,
+    );
     // The minimised state is shareable: a reload restores it.
     await harness.page.reload();
     await harness.page.waitForSelector("[data-action='restore']");
@@ -194,7 +223,10 @@ Deno.test("a locked map (editable=false) hides the toolbar and ignores edits", a
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.waitForTimeout(200);
     assertEquals(await harness.page.locator(PIN).count(), 0);
-    assert(!currentQuery(harness.page).includes("markers."), "locked map must not place markers");
+    assert(
+      !currentQuery(harness.page).includes("markers."),
+      "locked map must not place markers",
+    );
   });
 });
 
@@ -202,14 +234,26 @@ Deno.test("the category palette shows for markers and hides for line/polygon", a
   await withApp(async (harness) => {
     await openApp(harness);
     // Marker is the default tool → category palette visible.
-    assertEquals(await harness.page.locator("[data-palette='feature']").count(), 1);
+    assertEquals(
+      await harness.page.locator("[data-palette='feature']").count(),
+      1,
+    );
     await harness.page.locator("[data-tool='line']").click();
-    assertEquals(await harness.page.locator("[data-palette='feature']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-palette='feature']").count(),
+      0,
+    );
     await revealTools(harness);
     await harness.page.locator("[data-tool='polygon']").click();
-    assertEquals(await harness.page.locator("[data-palette='feature']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-palette='feature']").count(),
+      0,
+    );
     await harness.page.locator("[data-tool='marker']").click();
-    assertEquals(await harness.page.locator("[data-palette='feature']").count(), 1);
+    assertEquals(
+      await harness.page.locator("[data-palette='feature']").count(),
+      1,
+    );
   });
 });
 
@@ -230,7 +274,10 @@ Deno.test("the clear button removes every feature from the map and the URL", asy
     await harness.page.locator("[data-action='clear']").click();
     await harness.page.waitForSelector(PIN, { state: "detached" });
     assertEquals(await harness.page.locator(PIN).count(), 0);
-    assert(!currentQuery(harness.page).includes("markers."), "clear should empty the URL");
+    assert(
+      !currentQuery(harness.page).includes("markers."),
+      "clear should empty the URL",
+    );
   });
 });
 
@@ -242,7 +289,10 @@ Deno.test("drawing a line writes a polyline into the URL", async () => {
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.mouse.dblclick(MAP_POINT.x, MAP_POINT.y);
-    await waitForParams(harness, (query) => query.includes("lines.0.points.0.lat="));
+    await waitForParams(
+      harness,
+      (query) => query.includes("lines.0.points.0.lat="),
+    );
     const query = currentQuery(harness.page);
     assertStringIncludes(query, "lines.0.points.0.lat=");
     assertStringIncludes(query, "lines.0.points.1.lat=");
@@ -252,7 +302,10 @@ Deno.test("drawing a line writes a polyline into the URL", async () => {
 Deno.test("zooming writes the view to the URL and a reload restores it", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
-    assert(!currentQuery(harness.page).includes("view."), "no view in the URL initially");
+    assert(
+      !currentQuery(harness.page).includes("view."),
+      "no view in the URL initially",
+    );
     await zoomIn(harness);
     const zoomed = currentQuery(harness.page);
     // captureView writes the whole viewport — centre and zoom — on a zoom change.
@@ -290,7 +343,10 @@ Deno.test("drawing a polygon (closing on the first vertex) writes it to the URL"
     await harness.page.mouse.click(720, 360);
     await harness.page.mouse.click(620, 520);
     await harness.page.mouse.click(first.x, first.y);
-    await waitForParams(harness, (query) => query.includes("polygons.0.points.0.lat="));
+    await waitForParams(
+      harness,
+      (query) => query.includes("polygons.0.points.0.lat="),
+    );
     const query = currentQuery(harness.page);
     assertStringIncludes(query, "polygons.0.points.0.lat=");
     assertStringIncludes(query, "polygons.0.points.2.lat=");
@@ -306,7 +362,10 @@ Deno.test("toggling directional arrows draws a line with arrows in the URL", asy
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.mouse.dblclick(MAP_POINT.x, MAP_POINT.y);
-    await waitForParams(harness, (query) => query.includes("lines.0.arrows=true"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("lines.0.arrows=true"),
+    );
     assertStringIncludes(currentQuery(harness.page), "lines.0.arrows=true");
   });
 });
@@ -319,7 +378,10 @@ Deno.test("Escape commits an in-progress line and returns to the marker tool", a
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.keyboard.press("Escape");
-    await waitForParams(harness, (query) => query.includes("lines.0.points.0.lat="));
+    await waitForParams(
+      harness,
+      (query) => query.includes("lines.0.points.0.lat="),
+    );
     assertStringIncludes(currentQuery(harness.page), "lines.0.points.0.lat=");
     // The tool falls back to marker — its category palette reappears.
     await harness.page.waitForSelector("[data-palette='feature']");
@@ -336,7 +398,10 @@ Deno.test("clicking a vector feature edits it without dropping a marker on top",
     await harness.page.waitForSelector("[data-role='label-input']");
     // …and no stray marker was placed by the propagated map click.
     assertEquals(await harness.page.locator(PIN).count(), 0);
-    assert(!currentQuery(harness.page).includes("markers."), "no marker should be added");
+    assert(
+      !currentQuery(harness.page).includes("markers."),
+      "no marker should be added",
+    );
   });
 });
 
@@ -349,7 +414,10 @@ Deno.test("a line can be labelled via the shared editor", async () => {
     await input.waitFor();
     await input.fill("Route");
     await input.press("Enter");
-    await waitForParams(harness, (query) => query.includes("lines.0.label=Route"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("lines.0.label=Route"),
+    );
     assertStringIncludes(currentQuery(harness.page), "lines.0.label=Route");
   });
 });
@@ -360,7 +428,10 @@ Deno.test("right-clicking a line removes it from the URL", async () => {
     await drawLine(harness);
     await harness.page.mouse.click(LINE_MID.x, LINE_MID.y, { button: "right" });
     await waitForParams(harness, (query) => !query.includes("lines."));
-    assert(!currentQuery(harness.page).includes("lines."), "line should be gone from the URL");
+    assert(
+      !currentQuery(harness.page).includes("lines."),
+      "line should be gone from the URL",
+    );
   });
 });
 
@@ -374,7 +445,10 @@ Deno.test("a text label rendered with no text is discarded on blur", async () =>
     // Commit immediately without typing — the empty label should not persist.
     await editable.press("Enter");
     await harness.page.waitForSelector(TEXT_INPUT, { state: "detached" });
-    assert(!currentQuery(harness.page).includes("texts."), "empty text must be discarded");
+    assert(
+      !currentQuery(harness.page).includes("texts."),
+      "empty text must be discarded",
+    );
   });
 });
 
@@ -393,7 +467,10 @@ Deno.test("label markdown renders inline and is sanitised", async () => {
     // Bold renders; the javascript: link is stripped; the real link opens safely in
     // a new tab; the image (an XSS vector) is dropped entirely.
     assertStringIncludes(html, "<strong>bold</strong>");
-    assert(!html.includes("javascript:"), `javascript: URL should be stripped: ${html}`);
+    assert(
+      !html.includes("javascript:"),
+      `javascript: URL should be stripped: ${html}`,
+    );
     assertStringIncludes(html, 'href="https://example.com"');
     assertStringIncludes(html, 'rel="noopener noreferrer"');
     assertStringIncludes(html, 'target="_blank"');
@@ -422,7 +499,12 @@ Deno.test("a locked map renders labels read-only with clickable links", async ()
     const editable = harness.page.locator(TEXT_INPUT).first();
     await editable.waitFor();
     // The label is not editable, but its sanitised link is present and clickable.
-    assertEquals(await editable.evaluate((node) => (node as HTMLElement).isContentEditable), false);
+    assertEquals(
+      await editable.evaluate((node) =>
+        (node as HTMLElement).isContentEditable
+      ),
+      false,
+    );
     const href = await editable.locator("a").getAttribute("href");
     assertEquals(href, "https://example.com");
   });
@@ -432,12 +514,18 @@ Deno.test("the restore button re-expands a collapsed toolbar", async () => {
   await withApp(async (harness) => {
     await openApp(harness, "?collapsed=true");
     await harness.page.waitForSelector("[data-action='restore']");
-    assertEquals(await harness.page.locator("[data-palette='tool']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-palette='tool']").count(),
+      0,
+    );
     await harness.page.locator("[data-action='restore']").click();
     // Expanded again: the tool palette returns and the URL drops the flag.
     await harness.page.waitForSelector("[data-palette='tool']");
     await waitForParams(harness, (query) => !query.includes("collapsed"));
-    assert(!currentQuery(harness.page).includes("collapsed"), "collapsed flag should be cleared");
+    assert(
+      !currentQuery(harness.page).includes("collapsed"),
+      "collapsed flag should be cleared",
+    );
   });
 });
 
@@ -450,7 +538,10 @@ Deno.test("the eraser tool removes a feature on click", async () => {
     await harness.page.locator("[data-tool='eraser']").click();
     await harness.page.locator(PIN).click();
     await waitForParams(harness, (query) => !query.includes("markers.0."));
-    assert(!currentQuery(harness.page).includes("markers"), "the marker should be erased");
+    assert(
+      !currentQuery(harness.page).includes("markers"),
+      "the marker should be erased",
+    );
   });
 });
 
@@ -459,10 +550,16 @@ Deno.test("the … toggle reveals the less-common categories", async () => {
     await openApp(harness);
     // A common category shows by default; an uncommon one is hidden until expanded.
     await harness.page.waitForSelector("[data-feature-id='cafe']");
-    assertEquals(await harness.page.locator("[data-feature-id='airport']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-feature-id='airport']").count(),
+      0,
+    );
     await harness.page.locator("[data-action='more-features']").click();
     await harness.page.waitForSelector("[data-feature-id='airport']");
-    assertEquals(await harness.page.locator("[data-feature-id='airport']").count(), 1);
+    assertEquals(
+      await harness.page.locator("[data-feature-id='airport']").count(),
+      1,
+    );
   });
 });
 
@@ -471,8 +568,14 @@ Deno.test("the category palette has a fashion category and no parking one", asyn
     await openApp(harness);
     await harness.page.locator("[data-action='more-features']").click();
     await harness.page.waitForSelector("[data-feature-id='fashion']");
-    assertEquals(await harness.page.locator("[data-feature-id='fashion']").count(), 1);
-    assertEquals(await harness.page.locator("[data-feature-id='parking']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-feature-id='fashion']").count(),
+      1,
+    );
+    assertEquals(
+      await harness.page.locator("[data-feature-id='parking']").count(),
+      0,
+    );
   });
 });
 
@@ -482,7 +585,8 @@ Deno.test("the toolbar can be dragged and resets to its default spot on reload",
     const toolbar = harness.page.locator(TOOLBAR);
     const before = (await toolbar.boundingBox())!;
     // Grab the header in its empty middle (clear of the title / action buttons).
-    const header = (await harness.page.locator(".toolbar-header").boundingBox())!;
+    const header =
+      (await harness.page.locator(".toolbar-header").boundingBox())!;
     const grabX = header.x + header.width / 2;
     const grabY = header.y + header.height / 2;
     await harness.page.mouse.move(grabX, grabY);
@@ -490,14 +594,23 @@ Deno.test("the toolbar can be dragged and resets to its default spot on reload",
     await harness.page.mouse.move(grabX - 150, grabY + 120, { steps: 8 });
     await harness.page.mouse.up();
     const after = (await toolbar.boundingBox())!;
-    assert(Math.abs(after.x - before.x) > 50, "toolbar should have moved horizontally");
+    assert(
+      Math.abs(after.x - before.x) > 50,
+      "toolbar should have moved horizontally",
+    );
     assert(after.y - before.y > 50, "toolbar should have moved down");
     // The position is ephemeral — a reload returns it to the default spot.
     await harness.page.reload();
     await harness.page.waitForSelector(TOOLBAR);
     const reloaded = (await toolbar.boundingBox())!;
-    assert(Math.abs(reloaded.x - before.x) < 5, "toolbar x should reset on reload");
-    assert(Math.abs(reloaded.y - before.y) < 5, "toolbar y should reset on reload");
+    assert(
+      Math.abs(reloaded.x - before.x) < 5,
+      "toolbar x should reset on reload",
+    );
+    assert(
+      Math.abs(reloaded.y - before.y) < 5,
+      "toolbar y should reset on reload",
+    );
   });
 });
 
@@ -518,7 +631,10 @@ Deno.test("the size palette resizes the focused text label", async () => {
     await editable.type("hi");
     // The label is still focused; picking a size resizes it in place.
     await harness.page.locator("[data-size='xlarge']").click();
-    await waitForParams(harness, (query) => query.includes("texts.0.size=xlarge"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("texts.0.size=xlarge"),
+    );
     assertStringIncludes(currentQuery(harness.page), "texts.0.size=xlarge");
   });
 });
@@ -532,14 +648,20 @@ Deno.test("resizing a not-yet-typed label does not write an empty label to the U
     // Pick a size before typing anything — the empty label must not reach the URL.
     await harness.page.locator("[data-size='large']").click();
     await harness.page.waitForTimeout(150);
-    assert(!currentQuery(harness.page).includes("texts."), "empty label must not be encoded");
+    assert(
+      !currentQuery(harness.page).includes("texts."),
+      "empty label must not be encoded",
+    );
   });
 });
 
 Deno.test("the toolbar shows the lerida brand title", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
-    assertEquals(await harness.page.locator(".toolbar-title").textContent(), "lerida");
+    assertEquals(
+      await harness.page.locator(".toolbar-title").textContent(),
+      "lerida",
+    );
   });
 });
 
@@ -547,21 +669,35 @@ Deno.test("the … toggle reveals the less-common tools", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
     // Polygon is hidden until the overflow is expanded.
-    assertEquals(await harness.page.locator("[data-tool='polygon']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-tool='polygon']").count(),
+      0,
+    );
     await revealTools(harness);
-    assertEquals(await harness.page.locator("[data-tool='polygon']").count(), 1);
+    assertEquals(
+      await harness.page.locator("[data-tool='polygon']").count(),
+      1,
+    );
   });
 });
 
 Deno.test("a draw hint shows while drawing a line and clears when the tool changes", async () => {
   await withApp(async (harness) => {
     await openApp(harness);
-    assertEquals(await harness.page.locator("[data-role='draw-hint']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-role='draw-hint']").count(),
+      0,
+    );
     await harness.page.locator("[data-tool='line']").click();
     await harness.page.waitForSelector("[data-role='draw-hint']");
     await harness.page.locator("[data-tool='marker']").click();
-    await harness.page.waitForFunction(() => !document.querySelector("[data-role='draw-hint']"));
-    assertEquals(await harness.page.locator("[data-role='draw-hint']").count(), 0);
+    await harness.page.waitForFunction(() =>
+      !document.querySelector("[data-role='draw-hint']")
+    );
+    assertEquals(
+      await harness.page.locator("[data-role='draw-hint']").count(),
+      0,
+    );
   });
 });
 
@@ -596,7 +732,9 @@ Deno.test("clicking the brand title opens the about view, and it closes again", 
     );
     // The close button dismisses it.
     await harness.page.locator("[data-action='about-close']").click();
-    await harness.page.waitForFunction(() => !document.querySelector("[data-role='about']"));
+    await harness.page.waitForFunction(() =>
+      !document.querySelector("[data-role='about']")
+    );
     assertEquals(await harness.page.locator("[data-role='about']").count(), 0);
   });
 });
@@ -609,7 +747,9 @@ Deno.test("the eraser tool puts the map into eraser-cursor mode", async () => {
     await harness.page.waitForSelector("#map.eraser-mode");
     // Switching to another tool clears the eraser cursor.
     await harness.page.locator("[data-tool='marker']").click();
-    await harness.page.waitForFunction(() => !document.querySelector("#map.eraser-mode"));
+    await harness.page.waitForFunction(() =>
+      !document.querySelector("#map.eraser-mode")
+    );
     assertEquals(await harness.page.locator("#map.eraser-mode").count(), 0);
   });
 });
@@ -620,12 +760,20 @@ Deno.test("editing a placed marker recolours it via the toolbar", async () => {
     // Place a marker (the default colour is blue), then click it to edit.
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.waitForSelector(PIN);
-    await waitForParams(harness, (query) => query.includes("markers.0.color=blue"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("markers.0.color=blue"),
+    );
     await harness.page.locator(PIN).click();
     // The toolbar switches to editing-the-marker mode and exposes the palettes.
-    await harness.page.waitForSelector("[data-role='editing'][data-editing='marker']");
+    await harness.page.waitForSelector(
+      "[data-role='editing'][data-editing='marker']",
+    );
     await harness.page.locator("[data-color='red']").click();
-    await waitForParams(harness, (query) => query.includes("markers.0.color=red"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("markers.0.color=red"),
+    );
     assertStringIncludes(currentQuery(harness.page), "markers.0.color=red");
   });
 });
@@ -636,7 +784,9 @@ Deno.test("editing a placed line changes its width via the toolbar", async () =>
     await drawLine(harness);
     // Click the line to select it; the width palette then targets it.
     await harness.page.mouse.click(LINE_MID.x, LINE_MID.y);
-    await harness.page.waitForSelector("[data-role='editing'][data-editing='line']");
+    await harness.page.waitForSelector(
+      "[data-role='editing'][data-editing='line']",
+    );
     await harness.page.locator("[data-width='8']").click();
     await waitForParams(harness, (query) => query.includes("lines.0.width=8"));
     assertStringIncludes(currentQuery(harness.page), "lines.0.width=8");
@@ -655,7 +805,10 @@ Deno.test("the search box filters markers by label and jumps to a pick", async (
     await labelInput.waitFor();
     await labelInput.fill("Home");
     await labelInput.press("Enter");
-    await waitForParams(harness, (query) => query.includes("markers.0.label=Home"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("markers.0.label=Home"),
+    );
     // Searching its label surfaces exactly one result naming it.
     const search = harness.page.locator("[data-role='search-input']");
     await search.fill("home");
@@ -666,12 +819,17 @@ Deno.test("the search box filters markers by label and jumps to a pick", async (
     // Picking it clears the box (and pans the map via setView).
     await result.first().click();
     await harness.page.waitForFunction(() => {
-      const box = document.querySelector("[data-role='search-input']") as HTMLInputElement | null;
+      const box = document.querySelector("[data-role='search-input']") as
+        | HTMLInputElement
+        | null;
       return !!box && box.value === "";
     });
     // A query that matches nothing shows no results dropdown.
     await search.fill("nowhere-xyz");
-    assertEquals(await harness.page.locator("[data-role='search-results']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-role='search-results']").count(),
+      0,
+    );
   });
 });
 
@@ -690,7 +848,10 @@ Deno.test("search supports category:* syntax and the × button clears it", async
     await harness.page.locator("[data-feature-id='cafe']").click();
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
     await harness.page.waitForSelector(PIN);
-    await waitForParams(harness, (query) => query.includes("markers.0.feature=cafe"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("markers.0.feature=cafe"),
+    );
     await harness.page.locator("[data-feature-id='place']").click();
     await harness.page.mouse.click(MAP_POINT_B.x, MAP_POINT_B.y);
     await waitForParams(harness, (query) => query.includes("markers.1."));
@@ -703,7 +864,10 @@ Deno.test("search supports category:* syntax and the × button clears it", async
     // The × button clears the query and closes the dropdown.
     await harness.page.locator("[data-action='search-clear']").click();
     assertEquals(await search.inputValue(), "");
-    assertEquals(await harness.page.locator("[data-role='search-results']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-role='search-results']").count(),
+      0,
+    );
   });
 });
 
@@ -723,7 +887,10 @@ Deno.test("arrow keys move the search highlight and Enter jumps to it", async ()
     assertEquals(await results.count(), 2);
     // ArrowDown highlights the first result, again the second.
     await search.press("ArrowDown");
-    assertEquals(await harness.page.locator("[data-search-result].active").count(), 1);
+    assertEquals(
+      await harness.page.locator("[data-search-result].active").count(),
+      1,
+    );
     assertEquals(
       await harness.page.locator("[data-search-result='0'].active").count(),
       1,
@@ -736,7 +903,9 @@ Deno.test("arrow keys move the search highlight and Enter jumps to it", async ()
     // Enter on the highlighted result jumps to it and clears the box.
     await search.press("Enter");
     await harness.page.waitForFunction(() => {
-      const box = document.querySelector("[data-role='search-input']") as HTMLInputElement | null;
+      const box = document.querySelector("[data-role='search-input']") as
+        | HTMLInputElement
+        | null;
       return !!box && box.value === "";
     });
   });
@@ -746,13 +915,22 @@ Deno.test("the options panel sets the page title into the URL and document", asy
   await withApp(async (harness) => {
     await openApp(harness);
     // The cog opens the options panel in place of the drawing tools.
-    assertEquals(await harness.page.locator("[data-palette='tool']").count(), 1);
+    assertEquals(
+      await harness.page.locator("[data-palette='tool']").count(),
+      1,
+    );
     await harness.page.locator("[data-action='options']").click();
     await harness.page.waitForSelector("[data-role='options']");
-    assertEquals(await harness.page.locator("[data-palette='tool']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-palette='tool']").count(),
+      0,
+    );
     // Typing a title updates the document title and the URL.
     await harness.page.locator("[data-role='title-input']").fill("Holiday");
-    await waitForParams(harness, (query) => query.includes("meta.title=Holiday"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("meta.title=Holiday"),
+    );
     assertEquals(await harness.page.title(), "Holiday");
     // While options is open, clicking the map places nothing.
     await harness.page.mouse.click(MAP_POINT.x, MAP_POINT.y);
@@ -796,19 +974,29 @@ Deno.test("locking makes an already-edited pin read-only (no editor on click)", 
     await label.waitFor();
     await label.fill("Home");
     await label.press("Enter");
-    await waitForParams(harness, (query) => query.includes("markers.0.label=Home"));
+    await waitForParams(
+      harness,
+      (query) => query.includes("markers.0.label=Home"),
+    );
     // Lock via the options panel. dispatchEvent fires the DOM click directly:
     // after a Leaflet popup auto-pan, Playwright's actionable-click path stalls
     // for seconds on this sequence even though the buttons are present and live
     // (verified: a raw DOM click opens the panel in ~16ms).
-    await harness.page.locator("[data-action='options']").dispatchEvent("click");
+    await harness.page.locator("[data-action='options']").dispatchEvent(
+      "click",
+    );
     await harness.page.locator("[data-action='lock']").dispatchEvent("click");
-    await harness.page.locator("[data-action='lock-confirm']").dispatchEvent("click");
+    await harness.page.locator("[data-action='lock-confirm']").dispatchEvent(
+      "click",
+    );
     await harness.page.waitForSelector(TOOLBAR, { state: "detached" });
     // Clicking the re-rendered pin no longer opens the label editor.
     await harness.page.locator(PIN).first().dispatchEvent("click");
     await harness.page.waitForTimeout(300);
-    assertEquals(await harness.page.locator("[data-role='label-input']").count(), 0);
+    assertEquals(
+      await harness.page.locator("[data-role='label-input']").count(),
+      0,
+    );
   });
 });
 

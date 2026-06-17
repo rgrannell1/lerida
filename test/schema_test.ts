@@ -36,32 +36,55 @@ const CASES: Case[] = [
   },
   {
     name: "marker with feature, colour and label",
-    state: { markers: [{ lat: 1, lng: 2, feature: "museum", color: "red", label: "Home" }] },
+    state: {
+      markers: [{
+        lat: 1,
+        lng: 2,
+        feature: "museum",
+        color: "red",
+        label: "Home",
+      }],
+    },
     params: "markers.0.lat=1&markers.0.lng=2&markers.0.feature=museum&" +
       "markers.0.color=red&markers.0.label=Home",
   },
   {
     name: "line with two vertices and a colour",
-    state: { lines: [{ points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }], color: "blue" }] },
+    state: {
+      lines: [{
+        points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }],
+        color: "blue",
+      }],
+    },
     params: "lines.0.points.0.lat=1&lines.0.points.0.lng=2&" +
       "lines.0.points.1.lat=3&lines.0.points.1.lng=4&lines.0.color=blue",
   },
   {
     name: "line with directional arrows",
-    state: { lines: [{ points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }], arrows: true }] },
+    state: {
+      lines: [{
+        points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }],
+        arrows: true,
+      }],
+    },
     params: "lines.0.points.0.lat=1&lines.0.points.0.lng=2&" +
       "lines.0.points.1.lat=3&lines.0.points.1.lng=4&lines.0.arrows=true",
   },
   {
     name: "line with a custom stroke width",
-    state: { lines: [{ points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }], width: 8 }] },
+    state: {
+      lines: [{ points: [{ lat: 1, lng: 2 }, { lat: 3, lng: 4 }], width: 8 }],
+    },
     params: "lines.0.points.0.lat=1&lines.0.points.0.lng=2&" +
       "lines.0.points.1.lat=3&lines.0.points.1.lng=4&lines.0.width=8",
   },
   {
     name: "text label with size",
-    state: { texts: [{ lat: 1, lng: 2, text: "Hi", color: "blue", size: "large" }] },
-    params: "texts.0.lat=1&texts.0.lng=2&texts.0.text=Hi&texts.0.color=blue&texts.0.size=large",
+    state: {
+      texts: [{ lat: 1, lng: 2, text: "Hi", color: "blue", size: "large" }],
+    },
+    params:
+      "texts.0.lat=1&texts.0.lng=2&texts.0.text=Hi&texts.0.color=blue&texts.0.size=large",
   },
   {
     name: "collapsed toolbar flag",

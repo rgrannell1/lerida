@@ -49,7 +49,8 @@ export function Options(): m.Component {
           placeholder: "lerida",
           spellcheck: false,
           value: state.meta?.title ?? "",
-          oninput: (event: InputEvent) => setTitle((event.target as HTMLInputElement).value),
+          oninput: (event: InputEvent) =>
+            setTitle((event.target as HTMLInputElement).value),
           "data-role": "title-input",
         }),
       );
@@ -78,8 +79,16 @@ export function Options(): m.Component {
           },
           "data-action": "lock",
         }, "Lock this map");
+      const numberedControl = m("button.options-button", {
+        onclick: () => {
+          ui.numberedMode = !ui.numberedMode;
+        },
+        "data-action": "numbered-toggle",
+        "data-active": ui.numberedMode ? "true" : "false",
+      }, ui.numberedMode ? "Numbered: on" : "Numbered: off");
       return m("div.options-panel", { "data-role": "options" }, [
         titleRow,
+        row("Pins", numberedControl),
         row(
           "Map",
           m("button.options-button.danger", {

@@ -19,5 +19,8 @@ DOMPurify.addHook("afterSanitizeAttributes", (node) => {
 // Render a raw markdown string to sanitised inline HTML.
 export function renderMarkdown(raw: string): string {
   const html = marked.parseInline(raw) as string;
-  return DOMPurify.sanitize(html, { ALLOWED_TAGS: MARKDOWN_TAGS, ALLOWED_ATTR: MARKDOWN_ATTR });
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: MARKDOWN_TAGS,
+    ALLOWED_ATTR: MARKDOWN_ATTR,
+  });
 }

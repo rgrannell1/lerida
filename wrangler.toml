@@ -1,0 +1,14 @@
+# Cloudflare Pages config for the lerida image-render Function
+# (functions/render.png.ts). The site itself stays static (web/, built by
+# bs/build.ts); this only adds the Browser Rendering binding the Function needs.
+#
+# `name` must match the existing Pages project. Browser Rendering must be enabled
+# on the account (Workers Paid plan) and may also be set as a binding in the Pages
+# dashboard (Settings -> Functions -> Bindings) instead of here.
+name = "lerida"
+pages_build_output_dir = "web"
+compatibility_date = "2026-06-17"
+compatibility_flags = ["nodejs_compat"]
+
+[browser]
+binding = "MYBROWSER"

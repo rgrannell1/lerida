@@ -49,7 +49,10 @@ const cache = new Map<string, Place[]>();
 
 // Look up `query` against Nominatim, returning up to five places. Cached by the
 // query text and the viewbox (results differ per map view).
-export async function geocode(query: string, options: GeocodeOptions = {}): Promise<Place[]> {
+export async function geocode(
+  query: string,
+  options: GeocodeOptions = {},
+): Promise<Place[]> {
   const { signal, viewbox } = options;
   const key = `${viewbox ?? ""}|${query.trim().toLowerCase()}`;
   const cached = cache.get(key);
@@ -60,7 +63,10 @@ export async function geocode(query: string, options: GeocodeOptions = {}): Prom
   if (viewbox) {
     url += `&viewbox=${encodeURIComponent(viewbox)}&bounded=1`;
   }
-  const response = await fetch(url, { signal, headers: { Accept: "application/json" } });
+  const response = await fetch(url, {
+    signal,
+    headers: { Accept: "application/json" },
+  });
   if (!response.ok) {
     throw new Error(`geocode failed: ${response.status}`);
   }

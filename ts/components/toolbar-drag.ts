@@ -21,7 +21,9 @@ globalThis.addEventListener("resize", () => {
 // dragged corner and drop the default centring transform. Undefined before any
 // drag, so the CSS default (top-centre) applies.
 export function toolbarStyle(): string | undefined {
-  return dragged ? `left:${dragged.left}px;top:${dragged.top}px;transform:none;` : undefined;
+  return dragged
+    ? `left:${dragged.left}px;top:${dragged.top}px;transform:none;`
+    : undefined;
 }
 
 function clamp(value: number, min: number, max: number): number {
@@ -49,8 +51,16 @@ export function startToolbarDrag(event: PointerEvent): void {
   toolbar.style.transform = "none";
 
   const onMove = (move: PointerEvent): void => {
-    const left = clamp(move.clientX - grabX, 0, globalThis.innerWidth - rect.width);
-    const top = clamp(move.clientY - grabY, 0, globalThis.innerHeight - rect.height);
+    const left = clamp(
+      move.clientX - grabX,
+      0,
+      globalThis.innerWidth - rect.width,
+    );
+    const top = clamp(
+      move.clientY - grabY,
+      0,
+      globalThis.innerHeight - rect.height,
+    );
     // Drive the DOM directly during the drag (no Mithril redraw) for smoothness;
     // `dragged` keeps the value so any redraw re-applies the same position.
     toolbar.style.left = `${left}px`;

@@ -11,7 +11,14 @@ export const state: MapState = {};
 
 // Decode the current URL query string into `state`.
 export function loadFromUrl(): void {
-  const decoded = decodeUrl(globalThis.location.search);
+  loadFromQuery(globalThis.location.search);
+}
+
+// Decode an explicit query string into `state`. Separate from loadFromUrl so the
+// image worker (whose render page has no URL query) can load from an injected
+// `?c=...` instead of location.search.
+export function loadFromQuery(search: string): void {
+  const decoded = decodeUrl(search);
   state.view = decoded.view;
   state.markers = decoded.markers ?? [];
   state.lines = decoded.lines ?? [];
@@ -52,6 +59,12 @@ function snapshot(): StateObject {
     out.meta = state.meta;
   }
   return out as unknown as StateObject;
+}
+
+// The current state's compressed query ("c=..." or "" when empty) — the same
+// value written to the URL. Used to build the render.png share link.
+export function shareQuery(): string {
+  return encodeUrl(snapshot());
 }
 
 // Encode `state` into the URL query string without reloading the page.

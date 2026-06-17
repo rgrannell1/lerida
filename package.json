@@ -1,0 +1,12 @@
+{
+  "name": "lerida",
+  "private": true,
+  "description": "npm dependencies for the Cloudflare Pages image-render Function (functions/). The app itself is a Deno project built by bs/build.ts.",
+  "scripts": {
+    "build": "deno run -A bs/build.ts"
+  },
+  "devDependencies": {
+    "@cloudflare/puppeteer": "^1.1.0",
+    "@cloudflare/workers-types": "^4"
+  }
+}
