@@ -309,7 +309,7 @@ export function Search(): m.Component {
         m("div.search-box", [
           m("input.search-input", {
             type: "text",
-            placeholder: "Search markers and places…",
+            placeholder: "Search places",
             spellcheck: false,
             value: ui.searchQuery,
             oncreate: (vnode: m.VnodeDOM) => {

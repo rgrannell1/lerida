@@ -88,7 +88,6 @@ export function Options(): m.Component {
       }, ui.numberedMode ? "Numbered: on" : "Numbered: off");
       return m("div.options-panel", { "data-role": "options" }, [
         titleRow,
-        row("Pins", numberedControl),
         row(
           "Map",
           m("button.options-button.danger", {
@@ -96,6 +95,7 @@ export function Options(): m.Component {
             "data-action": "clear",
           }, "Clear all"),
         ),
+        row("Pins", numberedControl),
         row("Access", lockControl),
       ]);
     },

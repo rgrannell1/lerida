@@ -57,7 +57,9 @@ function measureLabels(vertices: [number, number][]): Leaflet.Marker[] {
     );
     labels.push(distanceLabel(mid, formatDistance(segment), "measure-label"));
   }
-  if (vertices.length >= 2) {
+  // A single-segment line's total just repeats its one length, so only show a
+  // total once there are two or more segments.
+  if (vertices.length >= 3) {
     labels.push(
       distanceLabel(
         vertices[vertices.length - 1],
@@ -102,12 +104,19 @@ export function addLineLayer(map: Leaflet.Map, line: Line): void {
     decorator?.addTo(target);
   };
   applyArrows();
-  // Permanent segment-length and total labels for a measured line. Computed once
-  // from the fixed geometry; removed with the line.
-  const labels = line.measure ? measureLabels(vertices) : [];
-  for (const label of labels) {
-    label.addTo(target);
-  }
+  // Permanent segment-length (and total) labels for a measured line. Rebuilt
+  // whenever the measure flag toggles; removed with the line.
+  let labels: Leaflet.Marker[] = [];
+  const applyMeasure = () => {
+    for (const label of labels) {
+      label.remove();
+    }
+    labels = line.measure ? measureLabels(vertices) : [];
+    for (const label of labels) {
+      label.addTo(target);
+    }
+  };
+  applyMeasure();
   const restyle = () => {
     layer.setStyle({ color: lineColor(), weight: lineWidth() });
     applyArrows();
@@ -136,6 +145,14 @@ export function addLineLayer(map: Leaflet.Map, line: Line): void {
       set: (on) => {
         line.arrows = on || undefined;
         applyArrows();
+        syncToUrl();
+      },
+    },
+    measure: {
+      get: () => line.measure ?? false,
+      set: (on) => {
+        line.measure = on || undefined;
+        applyMeasure();
         syncToUrl();
       },
     },
@@ -221,8 +238,8 @@ export function onShapeCreated(map: Leaflet.Map, event: PmCreateEvent): void {
     if (ui.selectedArrows) {
       line.arrows = true;
     }
-    // The measure tool draws a normal Line, tagged so it shows distance labels.
-    if (ui.tool === "measure") {
+    // The measure toggle tags a normal Line so it shows distance labels.
+    if (ui.selectedMeasure) {
       line.measure = true;
     }
     state.lines = state.lines ?? [];

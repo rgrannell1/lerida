@@ -29,9 +29,7 @@ export function applyTool(): void {
     return;
   }
   pm.disableDraw();
-  // Measure draws a normal polyline; the distance labels are added when the
-  // shape is committed.
-  if (ui.tool === "line" || ui.tool === "measure") {
+  if (ui.tool === "line") {
     pm.enableDraw("Line", drawOptions());
   } else if (ui.tool === "polygon") {
     pm.enableDraw("Polygon", drawOptions());
@@ -74,7 +72,7 @@ export function onKeyDown(event: KeyboardEvent): void {
   if (event.key !== "Escape" || !isEditable()) {
     return;
   }
-  if (ui.tool === "line" || ui.tool === "polygon" || ui.tool === "measure") {
+  if (ui.tool === "line" || ui.tool === "polygon") {
     finishDrawingToMarker();
   }
 }

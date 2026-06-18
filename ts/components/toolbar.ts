@@ -38,7 +38,6 @@ const TOOLS: Tool[] = [
   { id: "text", glyph: "font", title: "Text", common: true },
   { id: "eraser", glyph: "eraser", title: "Eraser", common: true },
   { id: "polygon", glyph: "square-o", title: "Polygon" },
-  { id: "measure", glyph: "arrows-h", title: "Measure", common: true },
 ];
 
 function selectTool(id: string): void {
@@ -90,6 +89,15 @@ function toggleArrows(): void {
     channel.set(!channel.get());
   } else {
     ui.selectedArrows = !ui.selectedArrows;
+  }
+}
+
+function toggleMeasure(): void {
+  const channel = selection.current?.measure;
+  if (channel) {
+    channel.set(!channel.get());
+  } else {
+    ui.selectedMeasure = !ui.selectedMeasure;
   }
 }
 
@@ -293,10 +301,10 @@ export function Toolbar(): m.Component {
         has: boolean,
         toolId: string,
       ) => (sel ? has : ui.tool === toolId);
-      // Width and arrows apply to both the line and measure tools (measure is a
-      // line that also shows distances).
+      // Width, arrows and the measure toggle apply to the line tool (and to a
+      // selected line).
       const showsLine = (has: boolean) =>
-        sel ? has : (ui.tool === "line" || ui.tool === "measure");
+        sel ? has : ui.tool === "line";
       // Active non-common tool stays visible even when the overflow is collapsed.
       const shownTools = TOOLS.filter((tool) =>
         tool.common || ui.showAllTools || ui.tool === tool.id
@@ -397,6 +405,25 @@ export function Toolbar(): m.Component {
             "div.palette.arrows-palette",
             { "data-palette": "arrows" },
             arrowsBtn,
+          ),
+        );
+      }
+      if (showsLine(!!sel?.measure)) {
+        const measureActive = sel?.measure
+          ? sel.measure.get()
+          : ui.selectedMeasure;
+        const measureBtn = glyphButton(
+          "arrows-h",
+          "Measure distances",
+          measureActive,
+          toggleMeasure,
+          { "data-action": "measure" },
+        );
+        rows.push(
+          m(
+            "div.palette.measure-palette",
+            { "data-palette": "measure" },
+            measureBtn,
           ),
         );
       }

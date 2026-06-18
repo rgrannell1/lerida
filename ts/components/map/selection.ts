@@ -31,6 +31,7 @@ export interface Selection {
   width?: Channel<number>;
   size?: Channel<string>;
   arrows?: Channel<boolean>;
+  measure?: Channel<boolean>;
 }
 
 // The active selection, or undefined when nothing is being edited.

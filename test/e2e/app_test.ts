@@ -85,9 +85,10 @@ Deno.test("app loads and renders the map without console errors", async () => {
     harness.page.on("pageerror", (error) => errors.push(error.message));
     await openApp(harness);
     await harness.page.waitForSelector(TOOLBAR);
-    // The common drawing tools (marker / line / text / eraser / measure) show by
-    // default; polygon hides behind the "…" overflow.
-    assertEquals(await harness.page.locator("[data-tool]").count(), 5);
+    // The common drawing tools (marker / line / text / eraser) show by default;
+    // polygon hides behind the "…" overflow. Measure is a toggle within the line
+    // tool, not a tool of its own.
+    assertEquals(await harness.page.locator("[data-tool]").count(), 4);
     // Offline tile / favicon fetches 404 — those aside, nothing should error.
     const ignore = /tile|openstreetmap|net::|404|Failed to load/i;
     const real = errors.filter((text) => !ignore.test(text));

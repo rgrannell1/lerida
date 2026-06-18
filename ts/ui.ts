@@ -15,6 +15,9 @@ export const ui = {
   selectedColor: DEFAULT_COLOR,
   selectedSize: DEFAULT_SIZE,
   selectedArrows: false,
+  // Whether the next line drawn is a measured line (shows per-segment lengths,
+  // and a total once it has more than one segment). A toggle within the line tool.
+  selectedMeasure: false,
   // Stroke weight (px) applied to the next line drawn.
   selectedWidth: DEFAULT_LINE_WIDTH,
   // Whether the feature palette shows the less-common categories (the "…" toggle).

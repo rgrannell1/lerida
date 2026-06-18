@@ -13,7 +13,7 @@ import { isEmbed, rendermode } from "../render.ts";
 // While a line or polygon is being drawn, remind the user how to finish — the
 // gesture (click to add points, Escape to commit) isn't otherwise discoverable.
 function drawHint(): m.Vnode | null {
-  if (ui.tool !== "line" && ui.tool !== "polygon" && ui.tool !== "measure") {
+  if (ui.tool !== "line" && ui.tool !== "polygon") {
     return null;
   }
   return m(
