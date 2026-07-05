@@ -76,6 +76,13 @@ function isPng(bytes: Uint8Array): boolean {
   return signature.every((value, index) => bytes[index] === value);
 }
 
+// A JPEG starts with the SOI marker FF D8 FF and ends with the EOI marker FF D9.
+function isJpeg(bytes: Uint8Array): boolean {
+  const start = bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+  const end = bytes[bytes.length - 2] === 0xff && bytes[bytes.length - 1] === 0xd9;
+  return start && end;
+}
+
 // Adapt a Playwright page to the worker's RenderPage. deviceScaleFactor is fixed
 // at context creation in Playwright, so setViewport only sizes the page here.
 function playwrightRenderPage(page: Page): RenderPage {
@@ -91,7 +98,12 @@ function playwrightRenderPage(page: Page): RenderPage {
         timeout: timeoutMs,
       });
     },
-    screenshot: async () => await page.screenshot(),
+    screenshot: async (options) =>
+      await page.screenshot(
+        options.format === "jpeg"
+          ? { type: "jpeg", quality: options.quality }
+          : { type: "png" },
+      ),
   };
 }
 
@@ -103,15 +115,63 @@ Deno.test("parseRenderParams rejects bad requests and accepts good ones", () => 
   ); // bad size
   assertEquals(parseRenderParams(new URLSearchParams("c=abc&dpr=7")).ok, false); // bad dpr
 
+  // Unknown / disallowed format and quality are rejected before any render.
+  assertEquals(
+    parseRenderParams(new URLSearchParams("c=abc&fmt=gif")).ok,
+    false,
+  );
+  assertEquals(
+    parseRenderParams(new URLSearchParams("c=abc&fmt=jpeg&q=99")).ok,
+    false,
+  );
+
+  // The 40:21 scale-downs of the default are accepted; an off-ratio pair at the
+  // same width is not (guards against a smaller render silently re-framing).
+  assert(parseRenderParams(new URLSearchParams("c=abc&w=800&h=420")).ok);
+  assert(parseRenderParams(new URLSearchParams("c=abc&w=600&h=315")).ok);
+  assertEquals(
+    parseRenderParams(new URLSearchParams("c=abc&w=800&h=315")).ok,
+    false,
+  );
+
   const good = parseRenderParams(
     new URLSearchParams("c=abc&w=1200&h=630&dpr=2"),
   );
   assert(good.ok);
-  assertEquals(good.value, { c: "abc", width: 1200, height: 630, dpr: 2 });
+  // No fmt given -> PNG, and PNG carries no quality.
+  assertEquals(good.value, {
+    c: "abc",
+    width: 1200,
+    height: 630,
+    dpr: 2,
+    format: "png",
+  });
+
+  const jpeg = parseRenderParams(new URLSearchParams("c=abc&fmt=jpeg&q=65"));
+  assert(jpeg.ok);
+  assertEquals(jpeg.value, {
+    c: "abc",
+    width: 1200,
+    height: 630,
+    dpr: 2,
+    format: "jpeg",
+    quality: 65,
+  });
 
   const defaulted = parseRenderParams(new URLSearchParams("c=abc"));
   assert(defaulted.ok);
-  assertEquals(defaulted.value, { c: "abc", width: 1200, height: 630, dpr: 2 });
+  assertEquals(defaulted.value, {
+    c: "abc",
+    width: 1200,
+    height: 630,
+    dpr: 2,
+    format: "png",
+  });
+
+  // fmt=jpeg with no q defaults the quality to 80.
+  const jpegDefault = parseRenderParams(new URLSearchParams("c=abc&fmt=jpeg"));
+  assert(jpegDefault.ok);
+  assertEquals(jpegDefault.value.quality, 80);
 });
 
 Deno.test("renderPng produces a correctly-sized PNG of a bare map", async () => {
@@ -162,6 +222,53 @@ Deno.test("renderPng produces a correctly-sized PNG of a bare map", async () => 
     );
     assertEquals(await page.locator("[data-feature='marker']").count(), 2);
     assertEquals(errors, []);
+  } finally {
+    await context.close();
+    await browser.close();
+  }
+});
+
+Deno.test("fmt=jpeg renders a valid JPEG of the same map", async () => {
+  const browser = await chromium.launch({ executablePath: findChromium() });
+  const context = await browser.newContext({
+    viewport: { width: 1200, height: 630 },
+    deviceScaleFactor: 2,
+  });
+  await context.route(
+    /tile\.openstreetmap\.org/,
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "image/png",
+        body: ONE_PX_PNG,
+      }),
+  );
+  const page = await context.newPage();
+  page.setDefaultTimeout(25_000);
+
+  try {
+    const base = `c=${sampleState()}&w=1200&h=630&dpr=2`;
+    const pngParams = parseRenderParams(new URLSearchParams(base));
+    const jpegParams = parseRenderParams(
+      new URLSearchParams(`${base}&fmt=jpeg&q=80`),
+    );
+    assert(pngParams.ok && jpegParams.ok);
+
+    const png = await renderPng(playwrightRenderPage(page), readAsset, pngParams.value);
+    const jpeg = await renderPng(
+      playwrightRenderPage(page),
+      readAsset,
+      jpegParams.value,
+    );
+
+    // Both are valid images of the requested format. (The offline tile stub is a
+    // near-uniform image, which PNG compresses better than JPEG, so we assert the
+    // format is honoured rather than a byte-size ordering; the real size win comes
+    // from JPEG on photographic map tiles.)
+    assert(isPng(png), "png output is a PNG");
+    assert(isJpeg(jpeg), "jpeg output is a JPEG");
+    // Surface both sizes as run evidence.
+    console.log(`  render sizes: png=${png.length}B jpeg=${jpeg.length}B`);
   } finally {
     await context.close();
     await browser.close();

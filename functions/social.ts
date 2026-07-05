@@ -4,7 +4,9 @@
 // Pure and portable so it can be unit-tested without the Cloudflare runtime.
 
 // Social cards want a 1.91:1 image; reuse the render worker's 1200x630 preset.
-export const SOCIAL_IMAGE = { width: 1200, height: 630 };
+// Served as JPEG (quality 80): crawlers fetch it eagerly, so the smaller file is
+// worth more than PNG's lossless sharpness for a link preview.
+export const SOCIAL_IMAGE = { width: 1200, height: 630, format: "jpeg", quality: 80 };
 
 function escapeAttr(value: string): string {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;");
@@ -17,6 +19,8 @@ export function socialImageUrl(origin: string, compressedState: string): string 
     c: compressedState,
     w: String(SOCIAL_IMAGE.width),
     h: String(SOCIAL_IMAGE.height),
+    fmt: SOCIAL_IMAGE.format,
+    q: String(SOCIAL_IMAGE.quality),
   });
   return `${origin}/render.png?${params.toString()}`;
 }

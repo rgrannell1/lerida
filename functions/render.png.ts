@@ -14,6 +14,7 @@
 import puppeteer from "@cloudflare/puppeteer";
 import { type AssetReader } from "./assemble.ts";
 import {
+  contentTypeFor,
   parseRenderParams,
   type RenderPage,
   renderPng,
@@ -36,13 +37,15 @@ export const onRequestGet: PagesFunction<Env> = async (
       headers: { "content-type": "text/plain" },
     });
   }
-  const { c, width, height, dpr } = parsed.value;
+  const { c, width, height, dpr, format, quality } = parsed.value;
 
   // Cache on the normalised render parameters: identical params, identical image.
+  // Format and quality are part of the key so a PNG and a JPEG of the same map
+  // don't collide.
   const cacheKey = new Request(
     `${url.origin}/render.png?c=${
       encodeURIComponent(c)
-    }&w=${width}&h=${height}&dpr=${dpr}`,
+    }&w=${width}&h=${height}&dpr=${dpr}&fmt=${format}&q=${quality ?? ""}`,
   );
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
@@ -72,13 +75,19 @@ export const onRequestGet: PagesFunction<Env> = async (
           timeout: timeoutMs,
         });
       },
-      screenshot: () => page.screenshot({ type: "png" }) as Promise<Uint8Array>,
+      // puppeteer rejects a `quality` on a PNG shot, so only pass it for JPEG.
+      screenshot: (options) =>
+        page.screenshot(
+          options.format === "jpeg"
+            ? { type: "jpeg", quality: options.quality }
+            : { type: "png" },
+        ) as Promise<Uint8Array>,
     };
 
-    const png = await renderPng(renderPage, readAsset, parsed.value);
-    const response = new Response(png, {
+    const image = await renderPng(renderPage, readAsset, parsed.value);
+    const response = new Response(image, {
       headers: {
-        "content-type": "image/png",
+        "content-type": contentTypeFor(format),
         "cache-control": "public, max-age=31536000, immutable",
       },
     });

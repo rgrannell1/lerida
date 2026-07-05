@@ -21,17 +21,34 @@ const SIZES: SizePreset[] = [
   { id: "small", name: "Small (800×600)", width: 800, height: 600 },
 ];
 
+// Image quality presets. Photographic map tiles make a lossless PNG heavy, so the
+// default is a JPEG: much smaller for a small loss of sharpness. `params` is the
+// extra render.png query (fmt/q); PNG adds nothing so old-style links still work.
+interface QualityPreset {
+  id: string;
+  name: string;
+  params: string;
+}
+
+const QUALITIES: QualityPreset[] = [
+  { id: "standard", name: "Standard — JPEG (smaller)", params: "&fmt=jpeg&q=80" },
+  { id: "small", name: "Small — JPEG (smallest)", params: "&fmt=jpeg&q=50" },
+  { id: "sharp", name: "Sharp — PNG (largest)", params: "" },
+];
+
 // Retina by default — crisp on most screens.
 const DPR = 2;
 
-// The render.png URL for the current map at the given size, or "" when the map is
-// empty (no state to render).
-function renderUrl(size: SizePreset): string {
+// The render.png URL for the current map at the given size and quality, or "" when
+// the map is empty (no state to render).
+function renderUrl(size: SizePreset, quality: QualityPreset): string {
   const query = shareQuery();
   if (!query) {
     return "";
   }
-  return `${globalThis.location.origin}/render.png?${query}&w=${size.width}&h=${size.height}&dpr=${DPR}`;
+  const origin = globalThis.location.origin;
+  const dimensions = `w=${size.width}&h=${size.height}&dpr=${DPR}`;
+  return `${origin}/render.png?${query}&${dimensions}${quality.params}`;
 }
 
 // An <iframe> snippet that embeds the current map as an interactive, chrome-less
@@ -65,13 +82,16 @@ function exportGeoJSON(): void {
 
 export function Share(): m.Component {
   let sizeId = SIZES[0].id;
+  let qualityId = QUALITIES[0].id;
   let copied = false;
   let embedCopied = false;
 
   return {
     view() {
       const size = SIZES.find((preset) => preset.id === sizeId) ?? SIZES[0];
-      const url = renderUrl(size);
+      const quality = QUALITIES.find((preset) => preset.id === qualityId) ??
+        QUALITIES[0];
+      const url = renderUrl(size, quality);
       const snippet = embedSnippet();
 
       const sizeSelect = m(
@@ -85,6 +105,19 @@ export function Share(): m.Component {
           "data-role": "share-size",
         },
         SIZES.map((preset) => m("option", { value: preset.id }, preset.name)),
+      );
+
+      const qualitySelect = m(
+        "select.options-input",
+        {
+          value: qualityId,
+          onchange: (event: Event) => {
+            qualityId = (event.target as HTMLSelectElement).value;
+            copied = false;
+          },
+          "data-role": "share-quality",
+        },
+        QUALITIES.map((preset) => m("option", { value: preset.id }, preset.name)),
       );
 
       if (!url) {
@@ -146,6 +179,7 @@ export function Share(): m.Component {
 
       return m("div.options-panel", { "data-role": "share" }, [
         row("Image size", sizeSelect),
+        row("Image quality", qualitySelect),
         row("Image link", urlField),
         copyButton,
         row("Data", exportButton),
