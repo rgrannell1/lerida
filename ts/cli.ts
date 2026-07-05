@@ -1,16 +1,19 @@
-// A Deno CLI that turns a map-state JSON object into a shareable lerida URL,
-// accepting or rejecting the input against the canonical schema. The state is
-// read from a file argument or stdin; a valid state prints its full URL to
-// stdout, an invalid state prints schema errors to stderr and exits non-zero.
+// A Deno CLI that converts between a map-state JSON object and a shareable lerida
+// URL, both directions gated by the canonical schema. Encode (default): read a
+// state from a file argument or stdin; a valid state prints its full URL, an
+// invalid one prints schema errors and exits non-zero. Decode (--decode): read a
+// lerida URL from an argument or stdin and print its state JSON, rejecting a URL
+// that decodes to a non-conforming state.
 //
-// The pure buildUrl() below carries all the logic so tests can exercise it
-// directly; main() only handles argv and IO and runs under import.meta.main.
+// The pure buildUrl()/decodeState() below carry all the logic so tests can
+// exercise them directly; main() only handles argv and IO and runs under
+// import.meta.main.
 
 // @deno-types="npm:ajv@^8.17.1/dist/2020.d.ts"
 import { Ajv2020, type ErrorObject } from "ajv/2020";
 import { type StateObject } from "cycle";
 import { MAP_SCHEMA } from "./schema.ts";
-import { encodeUrl } from "./url.ts";
+import { decodeUrl, encodeUrl } from "./url.ts";
 import type { MapState } from "./types.ts";
 
 // The default host shareable links point at; overridable with --base.
@@ -63,17 +66,54 @@ export function buildUrl(state: unknown, base: string = DEFAULT_BASE): BuildResu
   return { ok: true, url: joinUrl(base, query) };
 }
 
+// The result of decoding a URL: either the recovered state or the schema errors
+// that rejected it.
+export type DecodeResult =
+  | { ok: true; state: MapState }
+  | { ok: false; errors: string[] };
+
+// Decode a lerida URL back into its map state, then hold the result to the same
+// schema encode does. Accepts a full URL, a bare "?..." query, or a raw "c=..."
+// value: the query is whatever follows the first "?" (or the whole string if it
+// has none), which decodeUrl handles for both the compressed and legacy forms.
+export function decodeState(input: string): DecodeResult {
+  const trimmed = input.trim();
+  const queryStart = trimmed.indexOf("?");
+  const query = queryStart >= 0 ? trimmed.slice(queryStart + 1) : trimmed;
+  let state: MapState;
+  try {
+    state = decodeUrl(query);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    return { ok: false, errors: [`could not decode URL: ${reason}`] };
+  }
+  if (!validateState(state)) {
+    const errors = (validateState.errors ?? []).map(formatError);
+    return { ok: false, errors: errors.length > 0 ? errors : ["decoded state is invalid"] };
+  }
+  return { ok: true, state };
+}
+
 // Read all of stdin as text (used when no file path is given). Wrapping the
 // readable in a Response drains the whole stream without manual chunk handling.
 async function readStdin(): Promise<string> {
   return await new Response(Deno.stdin.readable).text();
 }
 
-// Parse argv into a base override and an optional input file path. Unknown flags
-// are treated as errors so typos are not silently ignored.
-function parseArgs(args: string[]): { base: string; file?: string } {
+// The parsed command line: the encode base, the optional positional input (a
+// state file when encoding, a URL literal when decoding), and the direction.
+interface ParsedArgs {
+  base: string;
+  input?: string;
+  decode: boolean;
+}
+
+// Parse argv into the base override, direction and positional input. Unknown
+// flags are treated as errors so typos are not silently ignored.
+function parseArgs(args: string[]): ParsedArgs {
   let base = DEFAULT_BASE;
-  let file: string | undefined;
+  let input: string | undefined;
+  let decode = false;
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (arg === "--base") {
@@ -85,19 +125,61 @@ function parseArgs(args: string[]): { base: string; file?: string } {
       index++;
     } else if (arg.startsWith("--base=")) {
       base = arg.slice("--base=".length);
+    } else if (arg === "--decode") {
+      decode = true;
     } else if (arg.startsWith("--")) {
       throw new Error(`unknown flag: ${arg}`);
     } else {
-      file = arg;
+      input = arg;
     }
   }
-  return { base, file };
+  return { base, input, decode };
 }
 
-// The IO shell: read state JSON from the file or stdin, validate, and either
-// print the URL (exit 0) or print errors to stderr (exit 1).
+// Print an error headline and its indented detail lines to stderr, then exit 1.
+function reportErrors(headline: string, errors: string[]): never {
+  console.error(headline);
+  for (const line of errors) {
+    console.error(`  ${line}`);
+  }
+  Deno.exit(1);
+}
+
+// Encode direction: read state JSON from the file or stdin, validate, and either
+// print the URL (exit 0) or print schema errors (exit 1).
+async function runEncode(file: string | undefined, base: string): Promise<void> {
+  const source = file ? await Deno.readTextFile(file) : await readStdin();
+  let state: unknown;
+  try {
+    state = JSON.parse(source);
+  } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
+    console.error(`invalid JSON: ${reason}`);
+    Deno.exit(1);
+  }
+  const result = buildUrl(state, base);
+  if (result.ok) {
+    console.log(result.url);
+    return;
+  }
+  reportErrors("state rejected by schema:", result.errors);
+}
+
+// Decode direction: read a lerida URL from the argument or stdin and print its
+// state JSON (exit 0), or print schema errors (exit 1).
+async function runDecode(input: string | undefined): Promise<void> {
+  const urlText = input ?? await readStdin();
+  const result = decodeState(urlText);
+  if (result.ok) {
+    console.log(JSON.stringify(result.state, null, 2));
+    return;
+  }
+  reportErrors("URL rejected by schema:", result.errors);
+}
+
+// The IO shell: parse argv, then run the chosen direction.
 async function main(): Promise<void> {
-  let parsed: { base: string; file?: string };
+  let parsed: ParsedArgs;
   try {
     parsed = parseArgs(Deno.args);
   } catch (error) {
@@ -105,26 +187,11 @@ async function main(): Promise<void> {
     Deno.exit(2);
   }
 
-  const source = parsed.file ? await Deno.readTextFile(parsed.file) : await readStdin();
-
-  let state: unknown;
-  try {
-    state = JSON.parse(source);
-  } catch (error) {
-    console.error(`invalid JSON: ${error instanceof Error ? error.message : String(error)}`);
-    Deno.exit(1);
-  }
-
-  const result = buildUrl(state, parsed.base);
-  if (result.ok) {
-    console.log(result.url);
+  if (parsed.decode) {
+    await runDecode(parsed.input);
     return;
   }
-  console.error("state rejected by schema:");
-  for (const line of result.errors) {
-    console.error(`  ${line}`);
-  }
-  Deno.exit(1);
+  await runEncode(parsed.input, parsed.base);
 }
 
 if (import.meta.main) {

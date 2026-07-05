@@ -3,7 +3,7 @@
 // states must be rejected by the schema with useful errors.
 
 import { assert, assertEquals, assertStringIncludes } from "@std/assert";
-import { buildUrl } from "../ts/cli.ts";
+import { buildUrl, decodeState } from "../ts/cli.ts";
 import { decodeUrl } from "../ts/url.ts";
 import type { MapState } from "../ts/types.ts";
 
@@ -96,4 +96,32 @@ Deno.test("invalid states are rejected with schema errors", () => {
     const joined = result.errors.join("\n").toLowerCase();
     assertStringIncludes(joined, testCase.expect, testCase.name);
   }
+});
+
+Deno.test("decodeState recovers the state encoded by buildUrl (round-trip)", () => {
+  for (const testCase of VALID_CASES) {
+    const built = buildUrl(testCase.state, "https://example.test");
+    assert(built.ok, `${testCase.name} should encode`);
+    const decoded = decodeState(built.url);
+    assert(decoded.ok, `${testCase.name} should decode`);
+    assertEquals(decoded.state, testCase.state, testCase.name);
+  }
+});
+
+Deno.test("decodeState accepts a full URL, a bare query, and a raw c= value", () => {
+  const built = buildUrl({ collapsed: true }, "https://example.test");
+  assert(built.ok);
+  const query = queryOf(built.url); // "?c=..."
+  const raw = query.slice(1); // "c=..."
+  for (const form of [built.url, query, raw]) {
+    const decoded = decodeState(form);
+    assert(decoded.ok, `should decode ${form}`);
+    assertEquals(decoded.state, { collapsed: true });
+  }
+});
+
+Deno.test("an empty query decodes to an empty state", () => {
+  const decoded = decodeState("https://example.test/");
+  assert(decoded.ok);
+  assertEquals(decoded.state, {});
 });
