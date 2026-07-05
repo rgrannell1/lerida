@@ -32,6 +32,8 @@ export interface Selection {
   size?: Channel<string>;
   arrows?: Channel<boolean>;
   measure?: Channel<boolean>;
+  // Marker-only: whether the label shows on hover instead of permanently.
+  hoverLabel?: Channel<boolean>;
 }
 
 // The active selection, or undefined when nothing is being edited.

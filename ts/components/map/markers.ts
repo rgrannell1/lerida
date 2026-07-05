@@ -12,7 +12,7 @@ import {
   swatchName,
 } from "../../features.ts";
 import type { Marker } from "../../types.ts";
-import { dropFrom, markElement, wireFeature } from "./editor.ts";
+import { applyTooltip, dropFrom, markElement, wireFeature } from "./editor.ts";
 import { featureTarget } from "./context.ts";
 import { rerenderFeatures } from "../map.ts";
 import type { Selection } from "./selection.ts";
@@ -83,6 +83,21 @@ export function addMarkerLayer(map: Leaflet.Map, marker: Marker): void {
         syncToUrl();
       },
     },
+    hoverLabel: {
+      get: () => marker.hoverLabel ?? false,
+      // Store only when hover-only; deleting (not assigning undefined) keeps the
+      // default flag out of the encoded URL. Re-bind the tooltip so the marker
+      // restyles between permanent and hover.
+      set: (on) => {
+        if (on) {
+          marker.hoverLabel = true;
+        } else {
+          delete marker.hoverLabel;
+        }
+        applyTooltip(layer, marker);
+        syncToUrl();
+      },
+    },
   });
   wireFeature(
     layer,
@@ -113,6 +128,11 @@ export function placeMarker(map: Leaflet.Map, point: Leaflet.LatLng): void {
     feature: ui.selectedFeature,
     color: ui.selectedColor,
   };
+  // Only carry the flag when hover-only; leaving the key off (rather than setting
+  // undefined) keeps the default out of the encoded URL.
+  if (ui.selectedHoverLabel) {
+    marker.hoverLabel = true;
+  }
   state.markers = state.markers ?? [];
   state.markers.push(marker);
   // In numbered mode the new pin's label is its 1-based position (the next

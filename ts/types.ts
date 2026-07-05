@@ -20,6 +20,9 @@ export interface Marker {
   feature?: string;
   color?: string;
   label?: string;
+  // When set, the label only shows on hover; absent/false keeps the default
+  // always-visible tooltip, so existing marker URLs render unchanged.
+  hoverLabel?: boolean;
 }
 
 // A polyline: an ordered list of vertices with an optional colour, label, and

@@ -101,6 +101,17 @@ function toggleMeasure(): void {
   }
 }
 
+// Toggle a marker's hover-only label: while a marker is selected it retargets
+// that marker, otherwise it sets the mode for the next marker placed.
+function toggleHoverLabel(): void {
+  const channel = selection.current?.hoverLabel;
+  if (channel) {
+    channel.set(!channel.get());
+  } else {
+    ui.selectedHoverLabel = !ui.selectedHoverLabel;
+  }
+}
+
 function toggleShowAllFeatures(): void {
   ui.showAllFeatures = !ui.showAllFeatures;
 }
@@ -371,6 +382,27 @@ export function Toolbar(): m.Component {
           m("div.palette.feature-palette", {
             "data-palette": "feature",
           }, [...shown.map(featureButton), moreFeaturesButton()]),
+        );
+      }
+      // The hover-label toggle applies to markers: when on, the next marker's
+      // label (or the selected marker's) shows on hover instead of permanently.
+      if (shows(!!sel?.hoverLabel, "marker")) {
+        const hoverActive = sel?.hoverLabel
+          ? sel.hoverLabel.get()
+          : ui.selectedHoverLabel;
+        const hoverBtn = glyphButton(
+          "eye",
+          "Label on hover only",
+          hoverActive,
+          toggleHoverLabel,
+          { "data-action": "hover-label" },
+        );
+        rows.push(
+          m(
+            "div.palette.hover-label-palette",
+            { "data-palette": "hover-label" },
+            hoverBtn,
+          ),
         );
       }
       if (shows(!!sel?.size, "text")) {

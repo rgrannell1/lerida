@@ -15,6 +15,9 @@ export const ui = {
   selectedColor: DEFAULT_COLOR,
   selectedSize: DEFAULT_SIZE,
   selectedArrows: false,
+  // Whether the next marker placed shows its label only on hover (vs the default
+  // always-visible tooltip). A toggle within the marker tool.
+  selectedHoverLabel: false,
   // Whether the next line drawn is a measured line (shows per-segment lengths,
   // and a total once it has more than one segment). A toggle within the line tool.
   selectedMeasure: false,
