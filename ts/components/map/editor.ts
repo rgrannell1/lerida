@@ -16,21 +16,27 @@ export function eraserActive(): boolean {
   return ui.tool === "eraser";
 }
 
-// Any feature carrying a text label.
+// Any feature carrying a text label. `hoverLabel` is marker-only (lines/polygons
+// never set it) and, when true, makes the tooltip show on hover instead of
+// permanently; threading it through the target keeps setLabel and re-binds
+// honouring the flag without a separate source of truth.
 export interface Labelled {
   label?: string;
+  hoverLabel?: boolean;
 }
 
-// Bind (or clear) a feature's permanent label tooltip from its current label.
-// Leaflet renders a string tooltip via innerHTML, and the label arrives from the
+// Bind (or clear) a feature's label tooltip from its current label. Leaflet
+// renders a string tooltip via innerHTML, and the label arrives from the
 // (shareable) URL, so it must be sanitised first — renderMarkdown runs it through
-// DOMPurify, matching how text labels are rendered.
+// DOMPurify, matching how text labels are rendered. The tooltip is permanent
+// (always-visible) by default; only markers flagged hoverLabel show on hover, so
+// lines/polygons/text keep permanent:true.
 export function applyTooltip(layer: Leaflet.Layer, target: Labelled): void {
   layer.unbindTooltip();
   const label = target.label;
   if (label && label.trim().length > 0) {
     layer.bindTooltip(renderMarkdown(label), {
-      permanent: true,
+      permanent: !target.hoverLabel,
       direction: "top",
     });
   }

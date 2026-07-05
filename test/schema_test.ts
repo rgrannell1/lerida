@@ -49,6 +49,14 @@ const CASES: Case[] = [
       "markers.0.color=red&markers.0.label=Home",
   },
   {
+    name: "marker with a hover-only label",
+    state: {
+      markers: [{ lat: 1, lng: 2, label: "Cafe", hoverLabel: true }],
+    },
+    params: "markers.0.lat=1&markers.0.lng=2&markers.0.label=Cafe&" +
+      "markers.0.hoverLabel=true",
+  },
+  {
     name: "line with two vertices and a colour",
     state: {
       lines: [{

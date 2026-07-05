@@ -76,6 +76,10 @@
         "label": {
           "type": "string",
           "description": "Text label shown as a tooltip."
+        },
+        "hoverLabel": {
+          "type": "boolean",
+          "description": "Show the label only on hover (default always visible)."
         }
       }
     },
