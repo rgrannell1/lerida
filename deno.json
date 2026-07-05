@@ -6,9 +6,13 @@
   "lint": {
     "plugins": ["./lint-plugins/no-single-letter-vars.ts"]
   },
+  "tasks": {
+    "cli": "deno run --allow-read ts/cli.ts"
+  },
   "imports": {
     "cycle": "https://raw.githubusercontent.com/rgrannell1/cycle/730d545148bcc23a40e91aa9807b31a6fe974a58/src/mod.ts",
     "ajv": "npm:ajv@^8.17.1",
+    "ajv/2020": "npm:ajv@^8.17.1/dist/2020.js",
     "esbuild": "npm:esbuild@^0.27.3",
     "@luca/esbuild-deno-loader": "jsr:@luca/esbuild-deno-loader@^0.11.1",
     "mithril": "npm:mithril@^2.2.2",
