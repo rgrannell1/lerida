@@ -12,8 +12,6 @@ import {
   waitForParams,
 } from "./helpers.ts";
 
-const PIN = "[data-feature='marker']";
-
 // Three distinct viewport points clear of the toolbar and zoom control.
 const P1 = { x: 700, y: 460 };
 const P2 = { x: 520, y: 360 };
@@ -50,7 +48,7 @@ async function placePin(
 ) {
   await harness.page.mouse.click(point.x, point.y);
   await harness.page.waitForFunction(
-    (n) => document.querySelectorAll("[data-feature='marker']").length === n,
+    (count) => document.querySelectorAll("[data-feature='marker']").length === count,
     expected,
   );
 }

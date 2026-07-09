@@ -10,7 +10,7 @@
     "cli": "deno run --allow-read ts/cli.ts"
   },
   "imports": {
-    "cycle": "https://raw.githubusercontent.com/rgrannell1/cycle/730d545148bcc23a40e91aa9807b31a6fe974a58/src/mod.ts",
+    "cycle": "https://raw.githubusercontent.com/rgrannell1/cycle/8b8a3de659c8158be1dd1f81a11df7dce85d120e/src/mod.ts",
     "ajv": "npm:ajv@^8.17.1",
     "ajv/2020": "npm:ajv@^8.17.1/dist/2020.js",
     "esbuild": "npm:esbuild@^0.27.3",

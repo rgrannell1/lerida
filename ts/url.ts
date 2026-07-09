@@ -1,10 +1,10 @@
-// URL ↔ state transport. cycle encodes the state into canonical query params;
-// we round coordinates (to keep them short) and compress the whole thing into a
-// single URL-safe `c=` value so shared links stay compact. Decoding accepts both
-// the compressed form and a legacy readable param string (so old URLs still open).
+// URL ↔ state transport. cycle's withCompression wrapper handles the whole
+// transport: state is encoded to canonical params, compressed into a single
+// URL-safe `c=` value, and decode falls back to legacy readable param strings
+// so old URLs still open. We round coordinates before encoding to keep them
+// short.
 
-import { type StateObject } from "cycle";
-import LZString from "lz-string";
+import { type StateObject, withCompression } from "cycle";
 import { codec } from "./schema.ts";
 import type { MapState } from "./types.ts";
 
@@ -12,6 +12,10 @@ import type { MapState } from "./types.ts";
 // rounding coordinates to this is visually lossless while trimming characters
 // off every point.
 const COORD_PRECISION = 1e5;
+
+// The compressed transport codec — compression and legacy readable-param
+// fallback are delegated to cycle.
+const compressedCodec = withCompression(codec);
 
 // Deep-clone `value`, rounding any numeric `lat`/`lng` leaf to COORD_PRECISION.
 // Generic so it covers view, markers, lines, polygons and texts uniformly.
@@ -31,26 +35,15 @@ function roundCoords(value: unknown): unknown {
   return value;
 }
 
-// Encode a state snapshot into the query string (without the leading "?"). Empty
-// state yields an empty string; otherwise the rounded canonical params are
-// compressed into a single `c=` value.
+// Encode a state snapshot into the query string (without the leading "?").
+// Empty state yields an empty string.
 export function encodeUrl(snapshot: StateObject): string {
-  const params = codec.encode(roundCoords(snapshot) as StateObject).toString();
-  if (params === "") {
-    return "";
-  }
-  return `c=${LZString.compressToEncodedURIComponent(params)}`;
+  return compressedCodec.encode(roundCoords(snapshot) as StateObject).toString();
 }
 
-// Decode a query string (with or without a leading "?") into state. A `c=` value
-// is decompressed back to canonical params; any other query is treated as a
-// legacy readable param string and decoded directly.
+// Decode a query string (with or without a leading "?") into state. cycle
+// decompresses a `c=` value, or decodes any other query as a legacy readable
+// param string.
 export function decodeUrl(search: string): MapState {
-  const query = search.replace(/^\?/, "");
-  const compressed = new URLSearchParams(query).get("c");
-  if (compressed !== null) {
-    const params = LZString.decompressFromEncodedURIComponent(compressed) ?? "";
-    return codec.decode(params) as MapState;
-  }
-  return codec.decode(query) as MapState;
+  return compressedCodec.decode(search.replace(/^\?/, "")) as MapState;
 }

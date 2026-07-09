@@ -60,8 +60,8 @@ export type ParseResult =
 // Validate and normalise the render query. Returns the typed params or the reason
 // to send a 422.
 export function parseRenderParams(params: URLSearchParams): ParseResult {
-  const c = params.get("c");
-  if (!c) {
+  const compressed = params.get("c");
+  if (!compressed) {
     return { ok: false, error: "missing required ?c= state" };
   }
   const width = Number(params.get("w") ?? DEFAULT_WIDTH);
@@ -77,7 +77,7 @@ export function parseRenderParams(params: URLSearchParams): ParseResult {
   if (!ALLOWED_FORMATS.has(format)) {
     return { ok: false, error: `unsupported format ${format}` };
   }
-  const value: RenderParams = { c, width, height, dpr, format };
+  const value: RenderParams = { c: compressed, width, height, dpr, format };
   // Quality applies only to JPEG; PNG carries none so its cache key stays clean.
   if (format === "jpeg") {
     const quality = Number(params.get("q") ?? DEFAULT_QUALITY);

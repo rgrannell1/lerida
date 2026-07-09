@@ -8,9 +8,9 @@ import { assert, assertEquals, assertStringIncludes } from "@std/assert";
 import { type Harness, launch, openApp, waitForParams } from "./helpers.ts";
 
 // Distinct viewport points clear of the toolbar (top) and zoom control.
-const A = { x: 520, y: 360 };
-const B = { x: 760, y: 470 };
-const C = { x: 560, y: 540 };
+const POINT_A = { x: 520, y: 360 };
+const POINT_B = { x: 760, y: 470 };
+const POINT_C = { x: 560, y: 540 };
 
 // Select the line tool and turn the measure toggle on.
 async function startMeasuredLine(harness: Harness): Promise<void> {
@@ -25,10 +25,10 @@ Deno.test("measure toggle draws a measured line with per-segment labels and a to
     const page = harness.page;
 
     await startMeasuredLine(harness);
-    // Two segments: A->B->C.
-    await page.mouse.click(A.x, A.y);
-    await page.mouse.click(B.x, B.y);
-    await page.mouse.click(C.x, C.y);
+    // Two segments: POINT_A->POINT_B->POINT_C.
+    await page.mouse.click(POINT_A.x, POINT_A.y);
+    await page.mouse.click(POINT_B.x, POINT_B.y);
+    await page.mouse.click(POINT_C.x, POINT_C.y);
     await page.keyboard.press("Escape");
 
     // The committed line is a normal line tagged measure, saved in the URL.
@@ -62,9 +62,9 @@ Deno.test("a single-segment measured line shows its length but no total", async 
     const page = harness.page;
 
     await startMeasuredLine(harness);
-    // One segment: A->B.
-    await page.mouse.click(A.x, A.y);
-    await page.mouse.click(B.x, B.y);
+    // One segment: POINT_A->POINT_B.
+    await page.mouse.click(POINT_A.x, POINT_A.y);
+    await page.mouse.click(POINT_B.x, POINT_B.y);
     await page.keyboard.press("Escape");
 
     await waitForParams(

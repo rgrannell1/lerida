@@ -35,7 +35,8 @@ const readAsset: AssetReader = async (path) =>
 // node Buffer: a Uint8Array body is not sent as binary by route.fulfill, so the
 // image fails to decode and the tile-load (hence __leridaReady) never fires.
 const ONE_PX_PNG = Buffer.from(
-  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
+  "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mNk" +
+    "+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
   "base64",
 );
 
