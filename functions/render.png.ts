@@ -25,6 +25,25 @@ interface Env {
   ASSETS: { fetch(input: Request | string): Promise<Response> };
 }
 
+// Browser Rendering rate-limits *launching* browsers, so a launch-per-request
+// worker 1101s under any burst of uncached renders. Instead, reuse an idle
+// session when one is open and only launch when none is free; keep_alive leaves
+// the browser warm for the next request (and reaps it after the idle window).
+const KEEP_ALIVE_MS = 60_000;
+
+async function acquireBrowser(endpoint: Fetcher) {
+  const sessions = await puppeteer.sessions(endpoint);
+  const free = sessions.find((session) => !session.connectionId);
+  if (free) {
+    try {
+      return await puppeteer.connect(endpoint, free.sessionId);
+    } catch {
+      // The session was taken or closed between listing and connect; launch below.
+    }
+  }
+  return await puppeteer.launch(endpoint, { keep_alive: KEEP_ALIVE_MS });
+}
+
 export const onRequestGet: PagesFunction<Env> = async (
   { request, env, waitUntil },
 ) => {
@@ -61,9 +80,9 @@ export const onRequestGet: PagesFunction<Env> = async (
     return new Uint8Array(await response.arrayBuffer());
   };
 
-  const browser = await puppeteer.launch(env.MYBROWSER);
+  const browser = await acquireBrowser(env.MYBROWSER);
+  const page = await browser.newPage();
   try {
-    const page = await browser.newPage();
     const renderPage: RenderPage = {
       setViewport: (width, height, deviceScaleFactor) =>
         page.setViewport({ width, height, deviceScaleFactor }),
@@ -94,6 +113,9 @@ export const onRequestGet: PagesFunction<Env> = async (
     waitUntil(cache.put(cacheKey, response.clone()));
     return response;
   } finally {
-    await browser.close();
+    // Close only the page and disconnect: the browser stays alive (keep_alive)
+    // so the next request reuses it instead of launching a fresh one.
+    await page.close();
+    await browser.disconnect();
   }
 };
