@@ -110,43 +110,45 @@ function onMapClick(map: Leaflet.Map, event: Leaflet.LeafletEvent): void {
   }
 }
 
+function markReady(): void {
+  (globalThis as { __leridaReady?: boolean }).__leridaReady = true;
+}
+
+function handleShapeCreated(
+  map: Leaflet.Map,
+  event: Leaflet.LeafletEvent,
+): void {
+  onShapeCreated(map, event as unknown as PmCreateEvent);
+}
+
+function createMap(vnode: m.VnodeDOM): void {
+  const node = vnode.dom as HTMLElement;
+  const map = leaflet.map(node).setView(initialCenter(), initialZoom());
+  map.zoomControl.setPosition("bottomleft");
+  const tiles = leaflet.tileLayer(TILE_URL, { attribution: TILE_ATTRIBUTION });
+  tiles.on("load", markReady);
+  tiles.addTo(map);
+  mapContext.map = map;
+  mapContext.featureLayers = leaflet.layerGroup().addTo(map);
+  renderFeatures(map);
+  map.on("moveend", captureView.bind(null, map));
+  map.on("zoomend", captureView.bind(null, map));
+  map.on("click", onMapClick.bind(null, map));
+  map.on("pm:create", handleShapeCreated.bind(null, map));
+  document.addEventListener("keydown", onKeyDown);
+}
+
+function removeMap(): void {
+  document.removeEventListener("keydown", onKeyDown);
+  mapContext.map?.remove();
+  mapContext.map = undefined;
+  mapContext.featureLayers = undefined;
+}
+
 export function MapView(): m.Component {
   return {
-    view() {
-      return m("div#map");
-    },
-    oncreate(vnode) {
-      const node = vnode.dom as HTMLElement;
-      const map = leaflet.map(node).setView(initialCenter(), initialZoom());
-      // Keep the zoom control clear of the top toolbar (overlaps on mobile).
-      map.zoomControl.setPosition("bottomleft");
-      const tiles = leaflet.tileLayer(TILE_URL, {
-        attribution: TILE_ATTRIBUTION,
-      });
-      // Signal "scene complete" once all initial tiles have loaded. Features are
-      // drawn synchronously below, so tiles-loaded means the whole map is painted.
-      // The image worker waits on this flag before screenshotting (design.md
-      // line 20); harmless on the live site.
-      tiles.on("load", () => {
-        (globalThis as { __leridaReady?: boolean }).__leridaReady = true;
-      });
-      tiles.addTo(map);
-      mapContext.map = map;
-      mapContext.featureLayers = leaflet.layerGroup().addTo(map);
-      renderFeatures(map);
-      map.on("moveend", () => captureView(map));
-      map.on("zoomend", () => captureView(map));
-      map.on("click", (event) => onMapClick(map, event));
-      map.on("pm:create", (event) => {
-        onShapeCreated(map, event as unknown as PmCreateEvent);
-      });
-      document.addEventListener("keydown", onKeyDown);
-    },
-    onremove() {
-      document.removeEventListener("keydown", onKeyDown);
-      mapContext.map?.remove();
-      mapContext.map = undefined;
-      mapContext.featureLayers = undefined;
-    },
+    view: () => m("div#map"),
+    oncreate: createMap,
+    onremove: removeMap,
   };
 }

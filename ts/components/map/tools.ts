@@ -69,10 +69,12 @@ export function clearFeatures(): void {
 
 // Document-level key handler: Escape finishes an in-progress line/polygon.
 export function onKeyDown(event: KeyboardEvent): void {
-  if (event.key !== "Escape" || !isEditable()) {
+  const cancelsDrawing = event.key === "Escape" && isEditable();
+  if (!cancelsDrawing) {
     return;
   }
-  if (ui.tool === "line" || ui.tool === "polygon") {
+  const isDrawingShape = ui.tool === "line" || ui.tool === "polygon";
+  if (isDrawingShape) {
     finishDrawingToMarker();
   }
 }

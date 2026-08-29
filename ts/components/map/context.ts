@@ -3,19 +3,20 @@
 
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
+import type { Maybe } from "../../maybe.ts";
 import { state } from "../../state.ts";
 
 export const mapContext: {
   // The live Leaflet map, so the toolbar's tool selection can drive draw mode.
-  map: Leaflet.Map | undefined;
+  map: Maybe<Leaflet.Map>;
   // All marker/line/polygon/text layers, grouped so they can be cleared at once.
-  featureLayers: Leaflet.LayerGroup | undefined;
+  featureLayers: Maybe<Leaflet.LayerGroup>;
   // The DOM click event a vector feature consumed, so the map's click handler
   // (which fires immediately afterwards via Leaflet propagation, with the same
   // originalEvent) skips placing a marker on top of it. Storing the event rather
   // than a latched boolean makes it self-correcting: if the follow-up map click
   // never fires, the stale value simply won't match the next, distinct event.
-  consumedClick: MouseEvent | undefined;
+  consumedClick: Maybe<MouseEvent>;
 } = {
   map: undefined,
   featureLayers: undefined,

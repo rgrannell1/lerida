@@ -24,44 +24,36 @@ function toBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-export async function assembleRenderHtml(
-  read: AssetReader,
-  compressedState: string,
-): Promise<string> {
-  const decoder = new TextDecoder();
-  const indexHtml = decoder.decode(await read("index.html"));
+interface AssetPaths {
+  css: string;
+  js: string;
+}
 
-  // The bundle is content-hashed, so discover the current filenames from the
-  // generated index.html rather than hard-coding hashes.
-  const cssPath = indexHtml.match(/href="([^"]*app-[^"]*\.css)"/)?.[1];
-  const jsPath = indexHtml.match(/src="([^"]*app-[^"]*\.js)"/)?.[1];
-  if (!cssPath || !jsPath) {
+function findAssetPaths(indexHtml: string): AssetPaths {
+  const css = indexHtml.match(/href="([^"]*app-[^"]*\.css)"/)?.[1];
+  const js = indexHtml.match(/src="([^"]*app-[^"]*\.js)"/)?.[1];
+  const hasAssets = css !== undefined && js !== undefined;
+  if (!hasAssets) {
     throw new Error("assemble: could not find hashed css/js in index.html");
   }
+  return { css, js };
+}
 
-  let css = decoder.decode(await read(cssPath.replace(/^\//, "")));
-  const js = decoder.decode(await read(jsPath.replace(/^\//, "")));
-
-  // Inline the Font Awesome woff2 (Chromium prefers woff2) so marker pins render
-  // without a network fetch. Other formats in the @font-face are left as dead
-  // relative URLs; Chromium never reaches for them once woff2 resolves.
-  const fontMatch = css.match(
+async function inlineFont(css: string, read: AssetReader): Promise<string> {
+  const match = css.match(
     /url\("?\.\/(fontawesome-webfont-[^)"?]*\.woff2)[^)]*"?\)/,
   );
-  if (fontMatch) {
-    const fontBytes = await read(`dist/css/${fontMatch[1]}`);
-    css = css.replace(
-      fontMatch[0],
-      `url(data:font/woff2;base64,${toBase64(fontBytes)})`,
-    );
+  if (!match) {
+    return css;
   }
+  const fontBytes = await read(`dist/css/${match[1]}`);
+  const dataUrl = `url(data:font/woff2;base64,${toBase64(fontBytes)})`;
+  return css.replace(match[0], dataUrl);
+}
 
-  // Guard against a literal </script> inside the bundle prematurely closing the
-  // inlined module (safe: only matters inside string literals, where it is
-  // equivalent).
+function renderDocument(css: string, js: string, compressedState: string): string {
   const inlineJs = js.replace(/<\/script>/gi, "<\\/script>");
   const injected = JSON.stringify({ c: compressedState });
-
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -75,4 +67,17 @@ export async function assembleRenderHtml(
 <script type="module">${inlineJs}</script>
 </body>
 </html>`;
+}
+
+export async function assembleRenderHtml(
+  read: AssetReader,
+  compressedState: string,
+): Promise<string> {
+  const decoder = new TextDecoder();
+  const indexHtml = decoder.decode(await read("index.html"));
+  const paths = findAssetPaths(indexHtml);
+  const rawCss = decoder.decode(await read(paths.css.replace(/^\//, "")));
+  const css = await inlineFont(rawCss, read);
+  const js = decoder.decode(await read(paths.js.replace(/^\//, "")));
+  return renderDocument(css, js, compressedState);
 }

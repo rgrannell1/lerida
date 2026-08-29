@@ -616,3 +616,13 @@ body {
     5 20,
     crosshair !important;
 }
+
+/* Broken-link notice: shown instead of the map when the URL state cannot be
+   decoded. */
+.broken-link {
+  max-width: 32rem;
+  margin: 4rem auto;
+  padding: 0 1rem;
+  font-family: var(--font-sans);
+  text-align: center;
+}

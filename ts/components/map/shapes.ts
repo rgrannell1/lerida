@@ -3,209 +3,28 @@
 
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
-import { decorators, leaflet, type PmCreateEvent } from "./leaflet.ts";
+import { type PmCreateEvent } from "./leaflet.ts";
 import { state, syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
 import {
   colorHex,
-  DEFAULT_COLOR,
-  DEFAULT_LINE_WIDTH,
-  swatchName,
 } from "../../features.ts";
 import type { Line, Polygon } from "../../types.ts";
-import { dropFrom, markElement, wireFeature } from "./editor.ts";
-import { featureTarget } from "./context.ts";
-import type { Selection } from "./selection.ts";
+import { LineLayer } from "./line-layer.ts";
+import { PolygonLayer } from "./polygon-layer.ts";
 
 function toPoint(latlng: Leaflet.LatLng): { lat: number; lng: number } {
   return { lat: latlng.lat, lng: latlng.lng };
 }
 
-// Format a metre distance: metres under 1 km, otherwise kilometres to 2 dp.
-function formatDistance(metres: number): string {
-  return metres < 1000
-    ? `${Math.round(metres)} m`
-    : `${(metres / 1000).toFixed(2)} km`;
-}
-
-// A non-interactive permanent label pinned at a coordinate, drawn as a divIcon so
-// it is captured in the rendered image.
-function distanceLabel(
-  latlng: Leaflet.LatLngExpression,
-  text: string,
-  className: string,
-): Leaflet.Marker {
-  return leaflet.marker(latlng, {
-    icon: leaflet.divIcon({ className, html: text }),
-    interactive: false,
-    keyboard: false,
-  });
-}
-
-// Permanent per-segment length labels plus a total for a measured line.
-function measureLabels(vertices: [number, number][]): Leaflet.Marker[] {
-  const labels: Leaflet.Marker[] = [];
-  let total = 0;
-  for (let index = 0; index < vertices.length - 1; index++) {
-    const from = leaflet.latLng(vertices[index]);
-    const to = leaflet.latLng(vertices[index + 1]);
-    const segment = from.distanceTo(to);
-    total += segment;
-    const mid = leaflet.latLng(
-      (from.lat + to.lat) / 2,
-      (from.lng + to.lng) / 2,
-    );
-    labels.push(distanceLabel(mid, formatDistance(segment), "measure-label"));
-  }
-  // A single-segment line's total just repeats its one length, so only show a
-  // total once there are two or more segments.
-  if (vertices.length >= 3) {
-    labels.push(
-      distanceLabel(
-        vertices[vertices.length - 1],
-        `Total ${formatDistance(total)}`,
-        "measure-total",
-      ),
-    );
-  }
-  return labels;
-}
-
-// Build a decorator drawing arrowheads along a polyline in its colour.
-function arrowDecorator(line: Leaflet.Polyline, color: string): Leaflet.Layer {
-  const symbol = decorators.Symbol.arrowHead({
-    pixelSize: 11,
-    polygon: false,
-    pathOptions: { color, weight: 2, stroke: true },
-  });
-  return decorators.polylineDecorator(line, {
-    patterns: [{ offset: "6%", repeat: "110px", symbol }],
-  });
-}
-
 export function addLineLayer(map: Leaflet.Map, line: Line): void {
-  const vertices = line.points.map((point) =>
-    [point.lat, point.lng] as [number, number]
-  );
-  const lineColor = () => line.color ?? colorHex(DEFAULT_COLOR);
-  const lineWidth = () => line.width ?? DEFAULT_LINE_WIDTH;
-  const target = featureTarget(map);
-  const layer = leaflet.polyline(vertices, {
-    color: lineColor(),
-    weight: lineWidth(),
-  });
-  layer.addTo(target);
-  markElement(layer, "line");
-  // The arrow decorator is rebuilt whenever colour / arrows change.
-  let decorator: Leaflet.Layer | undefined;
-  const applyArrows = () => {
-    decorator?.remove();
-    decorator = line.arrows ? arrowDecorator(layer, lineColor()) : undefined;
-    decorator?.addTo(target);
-  };
-  applyArrows();
-  // Permanent segment-length (and total) labels for a measured line. Rebuilt
-  // whenever the measure flag toggles; removed with the line.
-  let labels: Leaflet.Marker[] = [];
-  const applyMeasure = () => {
-    for (const label of labels) {
-      label.remove();
-    }
-    labels = line.measure ? measureLabels(vertices) : [];
-    for (const label of labels) {
-      label.addTo(target);
-    }
-  };
-  applyMeasure();
-  const restyle = () => {
-    layer.setStyle({ color: lineColor(), weight: lineWidth() });
-    applyArrows();
-  };
-  const buildSelection = (): Selection => ({
-    kind: "line",
-    layer,
-    color: {
-      get: () => swatchName(line.color),
-      set: (name) => {
-        line.color = colorHex(name);
-        restyle();
-        syncToUrl();
-      },
-    },
-    width: {
-      get: () => line.width ?? DEFAULT_LINE_WIDTH,
-      set: (px) => {
-        line.width = px;
-        restyle();
-        syncToUrl();
-      },
-    },
-    arrows: {
-      get: () => line.arrows ?? false,
-      set: (on) => {
-        line.arrows = on || undefined;
-        applyArrows();
-        syncToUrl();
-      },
-    },
-    measure: {
-      get: () => line.measure ?? false,
-      set: (on) => {
-        line.measure = on || undefined;
-        applyMeasure();
-        syncToUrl();
-      },
-    },
-  });
-  wireFeature(
-    layer,
-    line,
-    () => {
-      state.lines = dropFrom(state.lines, line);
-      layer.remove();
-      decorator?.remove();
-      for (const label of labels) {
-        label.remove();
-      }
-      syncToUrl();
-    },
-    true,
-    buildSelection,
-  );
+  const rendered = new LineLayer(map, line);
+  rendered.add();
 }
 
 export function addPolygonLayer(map: Leaflet.Map, polygon: Polygon): void {
-  const vertices = polygon.points.map((point) =>
-    [point.lat, point.lng] as [number, number]
-  );
-  const layer = leaflet.polygon(vertices, {
-    color: polygon.color ?? colorHex(DEFAULT_COLOR),
-  });
-  const buildSelection = (): Selection => ({
-    kind: "polygon",
-    layer,
-    color: {
-      get: () => swatchName(polygon.color),
-      set: (name) => {
-        polygon.color = colorHex(name);
-        layer.setStyle({ color: polygon.color });
-        syncToUrl();
-      },
-    },
-  });
-  wireFeature(
-    layer,
-    polygon,
-    () => {
-      state.polygons = dropFrom(state.polygons, polygon);
-      layer.remove();
-      syncToUrl();
-    },
-    true,
-    buildSelection,
-  );
-  layer.addTo(featureTarget(map));
-  markElement(layer, "polygon");
+  const rendered = new PolygonLayer(map, polygon);
+  rendered.add();
 }
 
 function readLineCoords(

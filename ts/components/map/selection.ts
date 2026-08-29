@@ -7,6 +7,7 @@
 import m from "mithril";
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
+import type { Maybe } from "../../maybe.ts";
 
 // A live binding to one editable property: read its current value (so the
 // palette can highlight it) and write a new one (mutating the feature, restyling
@@ -26,7 +27,7 @@ export interface Selection {
   layer: Leaflet.Layer;
   // Colour as a palette name (markers store the name; lines/polygons/text store
   // the hex, normalised back to a name via swatchName for the highlight).
-  color?: Channel<string | undefined, string>;
+  color?: Channel<Maybe<string>, string>;
   feature?: Channel<string>;
   width?: Channel<number>;
   size?: Channel<string>;
@@ -37,7 +38,7 @@ export interface Selection {
 }
 
 // The active selection, or undefined when nothing is being edited.
-export const selection: { current: Selection | undefined } = {
+export const selection: { current: Maybe<Selection> } = {
   current: undefined,
 };
 
@@ -50,7 +51,8 @@ export function select(next: Selection): void {
 // Clear the selection. With a layer, only clear if it's the selected one (so a
 // stale popup-close from an already-replaced selection doesn't wipe the new one).
 export function clearSelection(layer?: Leaflet.Layer): void {
-  if (layer && selection.current?.layer !== layer) {
+  const targetsOtherLayer = layer && selection.current?.layer !== layer;
+  if (targetsOtherLayer) {
     return;
   }
   if (selection.current) {

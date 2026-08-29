@@ -4,8 +4,17 @@
 
 // @deno-types="npm:@types/mithril@^2.2.7"
 import m from "mithril";
-import { shareQuery, state } from "../state.ts";
-import { stateToGeoJSON } from "../geojson.ts";
+import { shareQuery } from "../state.ts";
+import { optionsRow } from "./options-row.ts";
+import { DOM_ATTRIBUTE } from "./dom-attributes.ts";
+import {
+  changeQuality,
+  changeSize,
+  copyText,
+  createShareState,
+  exportGeoJSON,
+  type ShareState,
+} from "./share-actions.ts";
 
 // Offered image sizes. Must stay within the worker's allowlist (functions/render-core.ts).
 interface SizePreset {
@@ -62,130 +71,107 @@ function embedSnippet(): string {
   return `<iframe src="${src}" width="600" height="450" style="border:0" loading="lazy"></iframe>`;
 }
 
-// One labelled row: a caption above its control (matches the options panel).
-function row(label: string, control: m.Vnode): m.Vnode {
-  return m("label.options-row", [m("span.options-label", label), control]);
+function selectedSize(id: string): SizePreset {
+  for (const preset of SIZES) {
+    if (preset.id === id) {
+      return preset;
+    }
+  }
+  return SIZES[0];
 }
 
-// Serialise the live map to GeoJSON and trigger a download of lerida.geojson by
-// clicking a transient object-URL anchor. No DOM stays behind.
-function exportGeoJSON(): void {
-  const json = JSON.stringify(stateToGeoJSON(state), null, 2);
-  const blob = new Blob([json], { type: "application/geo+json" });
-  const href = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = href;
-  anchor.download = "lerida.geojson";
-  anchor.click();
-  URL.revokeObjectURL(href);
+function selectedQuality(id: string): QualityPreset {
+  for (const preset of QUALITIES) {
+    if (preset.id === id) {
+      return preset;
+    }
+  }
+  return QUALITIES[0];
+}
+
+function sizeSelect(live: ShareState): m.Vnode {
+  return m("select.options-input", {
+    value: live.sizeId,
+    onchange: changeSize.bind(null, live),
+    [DOM_ATTRIBUTE.role]: "share-size",
+  }, SIZES.map((preset) => m("option", { value: preset.id }, preset.name)));
+}
+
+function qualitySelect(live: ShareState): m.Vnode {
+  return m("select.options-input", {
+    value: live.qualityId,
+    onchange: changeQuality.bind(null, live),
+    [DOM_ATTRIBUTE.role]: "share-quality",
+  }, QUALITIES.map((preset) => m("option", { value: preset.id }, preset.name)));
+}
+
+function selectText(event: Event): void {
+  const target = event.target as HTMLInputElement | HTMLTextAreaElement;
+  target.select();
+}
+
+function emptyShare(): m.Vnode {
+  return m("div.options-panel", { [DOM_ATTRIBUTE.role]: "share" }, [
+    m(
+      "p.lock-warning",
+      "Add something to the map first, then copy its image link.",
+    ),
+  ]);
+}
+
+function imageControls(live: ShareState, url: string): m.Vnode[] {
+  const urlField = m("input.options-input", {
+    type: "text",
+    readonly: true,
+    value: url,
+    onclick: selectText,
+    [DOM_ATTRIBUTE.role]: "render-url",
+  });
+  const copyButton = m("button.options-button", {
+    onclick: copyText.bind(null, live, "copied", url),
+    [DOM_ATTRIBUTE.action]: "copy-render-url",
+  }, live.copied ? "Copied" : "Copy image link");
+  const exportButton = m("button.options-button", {
+    onclick: exportGeoJSON,
+    [DOM_ATTRIBUTE.action]: "export-geojson",
+  }, "Export GeoJSON");
+  return [
+    optionsRow("Image size", sizeSelect(live)),
+    optionsRow("Image quality", qualitySelect(live)),
+    optionsRow("Image link", urlField),
+    copyButton,
+    optionsRow("Data", exportButton),
+  ];
+}
+
+function embedControls(live: ShareState, snippet: string): m.Vnode[] {
+  const field = m("textarea.options-input", {
+    readonly: true,
+    rows: 3,
+    value: snippet,
+    onclick: selectText,
+    [DOM_ATTRIBUTE.role]: "embed-snippet",
+  });
+  const button = m("button.options-button", {
+    onclick: copyText.bind(null, live, "embedCopied", snippet),
+    [DOM_ATTRIBUTE.action]: "copy-embed",
+  }, live.embedCopied ? "Copied" : "Copy embed code");
+  return [optionsRow("Embed code", field), button];
+}
+
+function shareView(live: ShareState): m.Vnode {
+  const size = selectedSize(live.sizeId);
+  const quality = selectedQuality(live.qualityId);
+  const url = renderUrl(size, quality);
+  if (!url) {
+    return emptyShare();
+  }
+  const controls = imageControls(live, url);
+  controls.push(...embedControls(live, embedSnippet()));
+  return m("div.options-panel", { [DOM_ATTRIBUTE.role]: "share" }, controls);
 }
 
 export function Share(): m.Component {
-  let sizeId = SIZES[0].id;
-  let qualityId = QUALITIES[0].id;
-  let copied = false;
-  let embedCopied = false;
-
-  return {
-    view() {
-      const size = SIZES.find((preset) => preset.id === sizeId) ?? SIZES[0];
-      const quality = QUALITIES.find((preset) => preset.id === qualityId) ??
-        QUALITIES[0];
-      const url = renderUrl(size, quality);
-      const snippet = embedSnippet();
-
-      const sizeSelect = m(
-        "select.options-input",
-        {
-          value: sizeId,
-          onchange: (event: Event) => {
-            sizeId = (event.target as HTMLSelectElement).value;
-            copied = false;
-          },
-          "data-role": "share-size",
-        },
-        SIZES.map((preset) => m("option", { value: preset.id }, preset.name)),
-      );
-
-      const qualitySelect = m(
-        "select.options-input",
-        {
-          value: qualityId,
-          onchange: (event: Event) => {
-            qualityId = (event.target as HTMLSelectElement).value;
-            copied = false;
-          },
-          "data-role": "share-quality",
-        },
-        QUALITIES.map((preset) => m("option", { value: preset.id }, preset.name)),
-      );
-
-      if (!url) {
-        return m("div.options-panel", { "data-role": "share" }, [
-          m(
-            "p.lock-warning",
-            "Add something to the map first, then copy its image link.",
-          ),
-        ]);
-      }
-
-      const urlField = m("input.options-input", {
-        type: "text",
-        readonly: true,
-        value: url,
-        onclick: (event: Event) => (event.target as HTMLInputElement).select(),
-        "data-role": "render-url",
-      });
-
-      const copyButton = m("button.options-button", {
-        onclick: async () => {
-          await navigator.clipboard.writeText(url);
-          copied = true;
-          m.redraw();
-          setTimeout(() => {
-            copied = false;
-            m.redraw();
-          }, 1500);
-        },
-        "data-action": "copy-render-url",
-      }, copied ? "Copied" : "Copy image link");
-
-      const exportButton = m("button.options-button", {
-        onclick: exportGeoJSON,
-        "data-action": "export-geojson",
-      }, "Export GeoJSON");
-
-      const embedField = m("textarea.options-input", {
-        readonly: true,
-        rows: 3,
-        value: snippet,
-        onclick: (event: Event) =>
-          (event.target as HTMLTextAreaElement).select(),
-        "data-role": "embed-snippet",
-      });
-
-      const embedButton = m("button.options-button", {
-        onclick: async () => {
-          await navigator.clipboard.writeText(snippet);
-          embedCopied = true;
-          m.redraw();
-          setTimeout(() => {
-            embedCopied = false;
-            m.redraw();
-          }, 1500);
-        },
-        "data-action": "copy-embed",
-      }, embedCopied ? "Copied" : "Copy embed code");
-
-      return m("div.options-panel", { "data-role": "share" }, [
-        row("Image size", sizeSelect),
-        row("Image quality", qualitySelect),
-        row("Image link", urlField),
-        copyButton,
-        row("Data", exportButton),
-        row("Embed code", embedField),
-        embedButton,
-      ]);
-    },
-  };
+  const live = createShareState(SIZES[0].id, QUALITIES[0].id);
+  return { view: shareView.bind(null, live) };
 }

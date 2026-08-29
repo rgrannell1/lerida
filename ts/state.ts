@@ -31,22 +31,28 @@ export function loadFromQuery(search: string): void {
 
 // Build a clean snapshot for encoding — omit empty fields so the URL stays
 // minimal (no bare `markers=` when there are none).
-function snapshot(): StateObject {
-  const out: MapState = {};
-  if (state.view) {
-    out.view = state.view;
-  }
-  if (state.markers && state.markers.length > 0) {
+function copyFeatures(out: MapState): void {
+  const hasMarkers = (state.markers?.length ?? 0) > 0;
+  if (hasMarkers) {
     out.markers = state.markers;
   }
-  if (state.lines && state.lines.length > 0) {
+  const hasLines = (state.lines?.length ?? 0) > 0;
+  if (hasLines) {
     out.lines = state.lines;
   }
-  if (state.polygons && state.polygons.length > 0) {
+  const hasPolygons = (state.polygons?.length ?? 0) > 0;
+  if (hasPolygons) {
     out.polygons = state.polygons;
   }
-  if (state.texts && state.texts.length > 0) {
+  const hasTexts = (state.texts?.length ?? 0) > 0;
+  if (hasTexts) {
     out.texts = state.texts;
+  }
+}
+
+function copySettings(out: MapState): void {
+  if (state.view) {
+    out.view = state.view;
   }
   if (state.collapsed) {
     out.collapsed = true;
@@ -55,9 +61,16 @@ function snapshot(): StateObject {
   if (state.editable === false) {
     out.editable = false;
   }
-  if (state.meta && state.meta.title) {
+  const hasTitle = state.meta?.title !== undefined && state.meta.title !== "";
+  if (hasTitle) {
     out.meta = state.meta;
   }
+}
+
+function snapshot(): StateObject {
+  const out: MapState = {};
+  copyFeatures(out);
+  copySettings(out);
   return out as unknown as StateObject;
 }
 

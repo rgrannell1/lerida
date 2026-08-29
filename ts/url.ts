@@ -23,7 +23,8 @@ function roundCoords(value: unknown): unknown {
   if (Array.isArray(value)) {
     return value.map(roundCoords);
   }
-  if (value && typeof value === "object") {
+  const isObject = value !== null && typeof value === "object";
+  if (isObject) {
     const out: Record<string, unknown> = {};
     for (const [key, item] of Object.entries(value)) {
       out[key] = (key === "lat" || key === "lng") && typeof item === "number"

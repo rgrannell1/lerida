@@ -4,23 +4,23 @@
 
 // @deno-types="npm:@types/mithril@^2.2.7"
 import m from "mithril";
+import type { Maybe } from "../maybe.ts";
 
-let dragged: { left: number; top: number } | undefined;
+let dragged: Maybe<{ left: number; top: number }>;
 
-// A resize can leave a dragged toolbar pinned off-screen (e.g. the window shrank
-// past its corner), making it go missing. Drop the dragged position on resize so
-// it snaps back to the default top-centre, and redraw to re-apply the CSS default.
-globalThis.addEventListener("resize", () => {
+function resetPosition(): void {
   if (dragged) {
     dragged = undefined;
     m.redraw();
   }
-});
+}
+
+globalThis.addEventListener("resize", resetPosition);
 
 // Inline style for the toolbar root once it has been dragged: pin it to the
 // dragged corner and drop the default centring transform. Undefined before any
 // drag, so the CSS default (top-centre) applies.
-export function toolbarStyle(): string | undefined {
+export function toolbarStyle(): Maybe<string> {
   return dragged
     ? `left:${dragged.left}px;top:${dragged.top}px;transform:none;`
     : undefined;
@@ -28,6 +28,55 @@ export function toolbarStyle(): string | undefined {
 
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
+}
+
+class ToolbarDrag {
+  header: HTMLElement;
+  toolbar: HTMLElement;
+  rect: DOMRect;
+  grabX: number;
+  grabY: number;
+  moveHandler: (event: PointerEvent) => void;
+  upHandler: () => void;
+
+  constructor(header: HTMLElement, toolbar: HTMLElement, event: PointerEvent) {
+    this.header = header;
+    this.toolbar = toolbar;
+    this.rect = toolbar.getBoundingClientRect();
+    this.grabX = event.clientX - this.rect.left;
+    this.grabY = event.clientY - this.rect.top;
+    this.moveHandler = this.move.bind(this);
+    this.upHandler = this.finish.bind(this);
+  }
+
+  move(event: PointerEvent): void {
+    const left = clamp(
+      event.clientX - this.grabX,
+      0,
+      globalThis.innerWidth - this.rect.width,
+    );
+    const top = clamp(
+      event.clientY - this.grabY,
+      0,
+      globalThis.innerHeight - this.rect.height,
+    );
+    this.toolbar.style.left = `${left}px`;
+    this.toolbar.style.top = `${top}px`;
+    dragged = { left, top };
+  }
+
+  finish(): void {
+    this.header.removeEventListener("pointermove", this.moveHandler);
+    this.header.removeEventListener("pointerup", this.upHandler);
+  }
+
+  start(event: PointerEvent): void {
+    event.preventDefault();
+    this.header.setPointerCapture(event.pointerId);
+    this.toolbar.style.transform = "none";
+    this.header.addEventListener("pointermove", this.moveHandler);
+    this.header.addEventListener("pointerup", this.upHandler);
+  }
 }
 
 // Begin dragging from a header pointerdown. Ignores presses on the header's
@@ -41,36 +90,6 @@ export function startToolbarDrag(event: PointerEvent): void {
   if (!toolbar) {
     return;
   }
-  event.preventDefault();
-  // Pointer capture keeps the header as the target for pointermove/pointerup
-  // even after the finger slides off it — essential for touch drag on mobile.
-  header.setPointerCapture(event.pointerId);
-  const rect = toolbar.getBoundingClientRect();
-  const grabX = event.clientX - rect.left;
-  const grabY = event.clientY - rect.top;
-  toolbar.style.transform = "none";
-
-  const onMove = (move: PointerEvent): void => {
-    const left = clamp(
-      move.clientX - grabX,
-      0,
-      globalThis.innerWidth - rect.width,
-    );
-    const top = clamp(
-      move.clientY - grabY,
-      0,
-      globalThis.innerHeight - rect.height,
-    );
-    // Drive the DOM directly during the drag (no Mithril redraw) for smoothness;
-    // `dragged` keeps the value so any redraw re-applies the same position.
-    toolbar.style.left = `${left}px`;
-    toolbar.style.top = `${top}px`;
-    dragged = { left, top };
-  };
-  const onUp = (): void => {
-    header.removeEventListener("pointermove", onMove);
-    header.removeEventListener("pointerup", onUp);
-  };
-  header.addEventListener("pointermove", onMove);
-  header.addEventListener("pointerup", onUp);
+  const drag = new ToolbarDrag(header, toolbar, event);
+  drag.start(event);
 }

@@ -2,6 +2,8 @@
 // in the toolbar palette (each mapped to a Font Awesome 4 glyph), and the colour
 // swatches. The URL stores the category id (e.g. `cafe`); the glyph is looked up.
 
+import type { Maybe } from "./maybe.ts";
+
 // A selectable POI category: a semantic id, a display name, and its FA4 glyph.
 // `common` categories show in the palette by default; the rest live behind a
 // "more" (…) toggle.
@@ -132,7 +134,7 @@ export function colorHex(name: string): string {
 // Reverse of colorHex for the colour palette's highlight: given a feature's
 // stored colour (a palette name for markers, a hex for lines/polygons/text),
 // return the matching swatch name, or undefined if it isn't a palette colour.
-export function swatchName(color: string | undefined): string | undefined {
+export function swatchName(color: Maybe<string>): Maybe<string> {
   if (!color) {
     return undefined;
   }

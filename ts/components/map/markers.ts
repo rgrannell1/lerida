@@ -9,26 +9,12 @@ import {
   DEFAULT_COLOR,
   DEFAULT_FEATURE,
   iconFor,
-  swatchName,
 } from "../../features.ts";
 import type { Marker } from "../../types.ts";
-import { applyTooltip, dropFrom, markElement, wireFeature } from "./editor.ts";
+import { markElement } from "./editor.ts";
 import { featureTarget } from "./context.ts";
-import { rerenderFeatures } from "../map.ts";
-import type { Selection } from "./selection.ts";
-
-// In numbered mode the markers are an ordered numbered list: set each marker's
-// label to its 1-based position so placement auto-increments and deletes leave
-// no gaps. A no-op when numbered mode is off.
-export function renumberMarkers(): void {
-  if (!ui.numberedMode) {
-    return;
-  }
-  const markers = state.markers ?? [];
-  for (let index = 0; index < markers.length; index++) {
-    markers[index].label = String(index + 1);
-  }
-}
+import { MarkerEditor } from "./marker-editor.ts";
+import { renumberMarkers } from "./marker-state.ts";
 
 // How far above the marker position the label tooltip sits, clearing the pin.
 const MARKER_TOOLTIP_ANCHOR: [number, number] = [0, -38];
@@ -61,61 +47,8 @@ export function addMarkerLayer(map: Leaflet.Map, marker: Marker): void {
     icon: pinIcon(marker),
     zIndexOffset: MARKER_Z_INDEX,
   });
-  // Re-skin the pin from the marker's current feature/colour (after an edit).
-  const restyle = () => layer.setIcon(pinIcon(marker));
-  // The toolbar palettes edit these while the marker's editor is open.
-  const buildSelection = (): Selection => ({
-    kind: "marker",
-    layer,
-    color: {
-      get: () => swatchName(marker.color),
-      set: (name) => {
-        marker.color = name;
-        restyle();
-        syncToUrl();
-      },
-    },
-    feature: {
-      get: () => marker.feature ?? DEFAULT_FEATURE,
-      set: (id) => {
-        marker.feature = id;
-        restyle();
-        syncToUrl();
-      },
-    },
-    hoverLabel: {
-      get: () => marker.hoverLabel ?? false,
-      // Store only when hover-only; deleting (not assigning undefined) keeps the
-      // default flag out of the encoded URL. Re-bind the tooltip so the marker
-      // restyles between permanent and hover.
-      set: (on) => {
-        if (on) {
-          marker.hoverLabel = true;
-        } else {
-          delete marker.hoverLabel;
-        }
-        applyTooltip(layer, marker);
-        syncToUrl();
-      },
-    },
-  });
-  wireFeature(
-    layer,
-    marker,
-    () => {
-      state.markers = dropFrom(state.markers, marker);
-      layer.remove();
-      // Renumber the survivors so a numbered list has no gaps, then re-render so
-      // their labels update; both are no-ops when numbered mode is off.
-      if (ui.numberedMode) {
-        renumberMarkers();
-        rerenderFeatures();
-      }
-      syncToUrl();
-    },
-    false,
-    buildSelection,
-  );
+  const editor = new MarkerEditor(layer, marker, pinIcon.bind(null, marker));
+  editor.wire();
   layer.addTo(featureTarget(map));
   markElement(layer, "marker");
 }

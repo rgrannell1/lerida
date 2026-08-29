@@ -75,7 +75,9 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   const host = url.hostname;
-  if (host === "tile.openstreetmap.org" || host.endsWith(".tile.openstreetmap.org")) {
+  const isTileHost = host === "tile.openstreetmap.org" ||
+    host.endsWith(".tile.openstreetmap.org");
+  if (isTileHost) {
     event.respondWith(cacheTile(request));
   }
 });

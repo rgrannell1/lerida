@@ -3,11 +3,16 @@
 
 // @deno-types="npm:@types/leaflet@^1.9.12"
 import type * as Leaflet from "leaflet";
-import { syncToUrl } from "../../state.ts";
 import { ui } from "../../ui.ts";
-import { renderMarkdown } from "../../markdown.ts";
 import { isEditable, mapContext } from "./context.ts";
 import { clearSelection, select, type Selection } from "./selection.ts";
+import {
+  applyTooltip,
+  LabelEditor,
+  type Labelled,
+} from "./label-editor.ts";
+
+export { applyTooltip } from "./label-editor.ts";
 
 // True when the eraser tool is active: clicking any feature removes it instead
 // of editing it. The single source of the eraser rule, shared by every feature
@@ -20,35 +25,6 @@ export function eraserActive(): boolean {
 // never set it) and, when true, makes the tooltip show on hover instead of
 // permanently; threading it through the target keeps setLabel and re-binds
 // honouring the flag without a separate source of truth.
-export interface Labelled {
-  label?: string;
-  hoverLabel?: boolean;
-}
-
-// Bind (or clear) a feature's label tooltip from its current label. Leaflet
-// renders a string tooltip via innerHTML, and the label arrives from the
-// (shareable) URL, so it must be sanitised first — renderMarkdown runs it through
-// DOMPurify, matching how text labels are rendered. The tooltip is permanent
-// (always-visible) by default; only markers flagged hoverLabel show on hover, so
-// lines/polygons/text keep permanent:true.
-export function applyTooltip(layer: Leaflet.Layer, target: Labelled): void {
-  layer.unbindTooltip();
-  const label = target.label;
-  if (label && label.trim().length > 0) {
-    layer.bindTooltip(renderMarkdown(label), {
-      permanent: !target.hoverLabel,
-      direction: "top",
-    });
-  }
-}
-
-// Update a feature's label from editor input, refresh tooltip, write the URL.
-function setLabel(target: Labelled, layer: Leaflet.Layer, text: string): void {
-  target.label = text.trim().length > 0 ? text : undefined;
-  applyTooltip(layer, target);
-  syncToUrl();
-}
-
 // Open a popup with a text field bound to the feature's label, plus a delete
 // button. The field syncs the label live; Enter commits (closes the popup);
 // the delete button removes the feature.
@@ -57,42 +33,8 @@ export function openEditor(
   layer: Leaflet.Layer,
   remove: () => void,
 ): void {
-  const input = document.createElement("input");
-  input.type = "text";
-  input.className = "marker-label-input";
-  input.dataset.role = "label-input";
-  input.spellcheck = false;
-  input.placeholder = "Label";
-  input.value = target.label ?? "";
-  input.addEventListener("input", () => setLabel(target, layer, input.value));
-  input.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      layer.closePopup();
-    }
-  });
-
-  const deleteButton = document.createElement("button");
-  deleteButton.type = "button";
-  deleteButton.className = "label-delete";
-  deleteButton.dataset.role = "label-delete";
-  deleteButton.title = "Delete";
-  deleteButton.innerHTML = '<i class="fa fa-trash"></i>';
-  deleteButton.addEventListener("click", remove);
-
-  const editor = document.createElement("div");
-  editor.className = "label-editor";
-  editor.dataset.role = "label-editor";
-  editor.append(input, deleteButton);
-
-  layer.unbindPopup();
-  layer.bindPopup(editor).openPopup();
-  input.focus();
-}
-
-// Return a copy of `items` without `item` (identity match).
-export function dropFrom<Item>(items: Item[] | undefined, item: Item): Item[] {
-  return (items ?? []).filter((each) => each !== item);
+  const editor = new LabelEditor(target, layer, remove);
+  editor.open();
 }
 
 // Tag a feature's rendered element with data-feature so the e2e tests (and any
@@ -111,6 +53,63 @@ export function markElement(layer: Leaflet.Layer, kind: string): void {
   element?.setAttribute("data-feature", kind);
 }
 
+interface FeatureWireOptions {
+  layer: Leaflet.Layer;
+  target: Labelled;
+  remove: () => void;
+  consumesClick: boolean;
+  buildSelection?: () => Selection;
+}
+
+class FeatureEvents {
+  options: FeatureWireOptions;
+
+  constructor(options: FeatureWireOptions) {
+    this.options = options;
+  }
+
+  closePopup(): void {
+    clearSelection(this.options.layer);
+  }
+
+  click(event: Leaflet.LeafletEvent): void {
+    if (!isEditable()) {
+      return;
+    }
+    if (eraserActive()) {
+      this.options.remove();
+      return;
+    }
+    if (this.options.consumesClick) {
+      mapContext.consumedClick =
+        (event as Leaflet.LeafletMouseEvent).originalEvent;
+    }
+    openEditor(
+      this.options.target,
+      this.options.layer,
+      this.options.remove,
+    );
+    if (this.options.buildSelection) {
+      select(this.options.buildSelection());
+    }
+  }
+
+  openContextMenu(event: Leaflet.LeafletEvent): void {
+    if (!isEditable()) {
+      return;
+    }
+    (event as Leaflet.LeafletMouseEvent).originalEvent.preventDefault();
+    this.options.remove();
+  }
+
+  wire(): void {
+    applyTooltip(this.options.layer, this.options.target);
+    this.options.layer.on("popupclose", this.closePopup.bind(this));
+    this.options.layer.on("click", this.click.bind(this));
+    this.options.layer.on("contextmenu", this.openContextMenu.bind(this));
+  }
+}
+
 // Wire a feature layer: tooltip, tap-to-edit, and right-click / long-press remove.
 // Vector features (consumesClick) also flag the click so the map handler skips
 // placing a marker on top of them.
@@ -123,31 +122,12 @@ export function wireFeature(
   consumesClick: boolean,
   buildSelection?: () => Selection,
 ): void {
-  applyTooltip(layer, target);
-  layer.on("popupclose", () => clearSelection(layer));
-  layer.on("click", (event) => {
-    if (!isEditable()) {
-      return;
-    }
-    // The eraser tool removes the feature instead of opening its editor.
-    if (eraserActive()) {
-      remove();
-      return;
-    }
-    if (consumesClick) {
-      mapContext.consumedClick =
-        (event as Leaflet.LeafletMouseEvent).originalEvent;
-    }
-    openEditor(target, layer, remove);
-    if (buildSelection) {
-      select(buildSelection());
-    }
+  const events = new FeatureEvents({
+    layer,
+    target,
+    remove,
+    consumesClick,
+    buildSelection,
   });
-  layer.on("contextmenu", (event) => {
-    if (!isEditable()) {
-      return;
-    }
-    (event as Leaflet.LeafletMouseEvent).originalEvent.preventDefault();
-    remove();
-  });
+  events.wire();
 }
